@@ -67,7 +67,6 @@ Every time your node starts, it prints its pairing code:
 ```
 ====== my device pubkey: A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz
 my pairing code: A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz@byteball.org/bb#0000
-
 ```
 Put this code on your site so that your customers are able to start an exchange by clicking a link:
 ```
@@ -78,7 +77,7 @@ If you open this link in your control device (specified in `control_addresses`),
 ![Balance of the exchange](btc-exchange-balance.png)
 
 ## Security
-Since you are keeping large amounts of customer's funds online, your exchange is a lucrative target for attackers.  But unlike web-based exchanges, your exchange is running in chat interface, which makes it unnecessary to accept incoming connections and have publicly known IP addresses.  This means that in addition to standard security measures, you can also completely hide the IP address of your server from potential attackers so that it won't be easy for them to learn what server to attack in the first place.
+Since you are keeping large amounts of customers' funds online, your exchange is a lucrative target for attackers.  But unlike web-based exchanges, your exchange is running in chat interface, which makes it unnecessary to accept incoming connections and have publicly known IP addresses.  This means that in addition to standard security measures, you can also completely hide the IP address of your server from potential attackers so that it won't be easy for them to learn what server to attack in the first place.
 
 Although your node doesn't have to accept incoming connections, it still has to establish outgoing connections, at least with the hub, which can leak your IP address.  To avoid that, run your node through TOR by setting `socksHost`, `socksPort`, and `socksLocalDNS` in your `conf.json`.  Also, configure your bitcoin node to run through TOR by adding
 ```
