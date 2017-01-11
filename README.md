@@ -1,6 +1,6 @@
 # BTC exchange
 
-The exchange allows your customers to exchange bitcoins to bytes and bytes to bitcoins.  No registration required, the customer just chats with a chatbot in his [Byteball wallet](../byteball).
+The exchange allows your customers to exchange bitcoins to bytes and bytes to bitcoins.  No registration required, the customer just chats with a chatbot in his [Byteball wallet](../../../byteball).
 
 ## Install
 
@@ -43,7 +43,7 @@ After you start it for the first time, it will exit immediately complaining abou
 ```
 sqlite3 ~/.config/bitcore/byteball.sqlite
 ```
-and execute all SQL from [btc-exchange.sql](blob/master/btc-exchange.sql), then start the node again.  It will ask you about the name of the exchange (it will be displayed in chat windows of your clients) and your passphrase.  Choose a good passphrase as it will protect your and your customers' bytes that will be stored online.  The second time, your node will also exit complaining about missing admin_email conf setting.  This is the email where you will receive important notifications from your node.  Edit your `~/.config/bitcore/conf.json`, it should look like this:
+and execute all SQL from [btc-exchange.sql](btc-exchange.sql), then start the node again.  It will ask you about the name of the exchange (it will be displayed in chat windows of your clients) and your passphrase.  Choose a good passphrase as it will protect your and your customers' bytes that will be stored online.  The second time, your node will also exit complaining about missing admin_email conf setting.  This is the email where you will receive important notifications from your node.  Edit your `~/.config/bitcore/conf.json`, it should look like this:
 ```
 {
 	"deviceName": "Byte-BTC Exchange",
@@ -59,7 +59,7 @@ and execute all SQL from [btc-exchange.sql](blob/master/btc-exchange.sql), then 
 	"permanent_paring_secret": "0000"
 }
 ```
-The socks* settings are recommended to run your node through TOR.  Since you have to store large amounts of customers' bytes and bitcoins online, you don't want potential attackers to know your IP address, and TOR is a good way to hide it (see below).  See the documentation of [headless wallet](../headless-byteball) and [core library](../byteballcore) to learn about other settings in `conf.json`.
+The socks* settings are recommended to run your node through TOR.  Since you have to store large amounts of customers' bytes and bitcoins online, you don't want potential attackers to know your IP address, and TOR is a good way to hide it (see below).  See the documentation of [headless wallet](../../../headless-byteball) and [core library](../../../byteballcore) to learn about other settings in `conf.json`.
 
 After editing your `conf.json`, start the node again.  It will take some time to sync with both Byteball and Bitcoin networks.
 
@@ -73,7 +73,7 @@ Put this code on your site so that your customers are able to start an exchange 
 ```
 <a href="byteball:A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz@byteball.org/bb#0000">start a chat with the exchange chatbot</a>
 ```
-If you open this link in your control device (specified in `control_addresses`), you have access to admin functions, see the documentation for [headless wallet](../headless-byteball).  Type `balance` to see the current balances of the exchange:
+If you open this link in your control device (specified in `control_addresses`), you have access to admin functions, see the documentation for [headless wallet](../../../headless-byteball).  Type `balance` to see the current balances of the exchange:
 
 ![Balance of the exchange](btc-exchange-balance.png)
 
