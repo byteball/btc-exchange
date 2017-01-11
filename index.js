@@ -150,6 +150,7 @@ function exchangeBytesToBtc(byte_seller_deposit_id, onDone){
 				else
 					instant.handleInstantSellOrder(conn, byte_seller_deposit_id, row.byte_amount, row.device_address, onTransactionDone);
 			}, function(){
+				updateState(row.device_address, 'done');
 				if (row.sell_price)
 					book.matchUnderLock();
 				else{
@@ -184,6 +185,7 @@ function exchangeBtcToBytes(byte_buyer_deposit_id, onDone){
 				else
 					instant.handleInstantBuyOrder(conn, byte_buyer_deposit_id, row.satoshi_amount, row.device_address, onTransactionDone);
 			}, function(){
+				updateState(row.device_address, 'done');
 				if (row.buy_price)
 					book.matchUnderLock();
 				else{
@@ -259,6 +261,7 @@ eventBus.on('new_my_transactions', function(arrUnits){
 					function(){
 						var do_what = row.sell_price ? "add the order to the [book](command:book)" : "exchange";
 						device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(row.amount/1e9)+" GB but it is unconfirmed yet.  We'll "+do_what+" as soon as it gets final.");
+						updateState(row.device_address, 'waiting_for_confirmations');
 					}
 				);
 			});
@@ -578,6 +581,8 @@ function initChat(exchangeService){
 				});
 				return;
 			}
+			else if (state === 'waiting_for_byteball_address' && !bSetNewPrice)
+				return device.sendMessageToDevice(from_address, 'text', "This doesn't look like a valid Byteball address.  Please use \"Insert my address\" button at the bottom of the screen, then hit \"Send\".");
 			
 			var bValidBitcoinAddress = bitcore.Address.isValid(text, bitcoinNetwork);
 			if (bValidBitcoinAddress){
@@ -593,32 +598,27 @@ function initChat(exchangeService){
 				});
 				return;
 			}
+			else if (state === 'waiting_for_bitcoin_address' && !bSetNewPrice)
+				return device.sendMessageToDevice(from_address, 'text', "This doesn't look like a valid Bitcoin address.");
+			
+			if (bSetNewPrice)
+				return;
 			
 			switch(state){
 				case 'greeting':
+					device.sendMessageToDevice(from_address, 'text', "To start an exchange, see the current [rates](command:rates) or [set your price](command:set price).");
 					break;
 					
-				case 'waiting_for_byteball_address':
-					if (!bValidByteballAddress && !bSetNewPrice)
-						device.sendMessageToDevice(from_address, 'text', "That doesn't look like a valid Byteball address.  Please use \"Insert my address\" button at the bottom of the screen, then hit \"Send\".");
-					break;
-
-				case 'waiting_for_bitcoin_address':
-					if (!bValidBitcoinAddress && !bSetNewPrice)
-						device.sendMessageToDevice(from_address, 'text', "That doesn't look like a valid Bitcoin address.");
-					break;
-
 				case 'waiting_for_payment':
-					if (!bSetNewPrice)
-						device.sendMessageToDevice(from_address, 'text', "Waiting for your payment.  If you want to start another exchange, see the current [rates](command:rates) or [set your price](command:set price).");
+					device.sendMessageToDevice(from_address, 'text', "Waiting for your payment.  If you want to start another exchange, see the current [rates](command:rates) or [set your price](command:set price).");
 					break;
 
 				case 'waiting_for_confirmations':
-					if (!bSetNewPrice)
-						device.sendMessageToDevice(from_address, 'text', "Received your payment and waiting that it is confirmed.");
+					device.sendMessageToDevice(from_address, 'text', "Received your payment and waiting that it is confirmed.");
 					break;
 					
 				case 'done':
+					device.sendMessageToDevice(from_address, 'text', "If you want to start another exchange, see the current [rates](command:rates) or [set your price](command:set price).");
 					break;
 					
 				default:
@@ -673,6 +673,7 @@ function initChat(exchangeService){
 									return exchangeBtcToBytesUnderLock(res.insertId);
 								var do_what = row.buy_price ? "add the order to the [book](command:book)" : "exchange";
 								device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(received_satoshis/1e8)+" BTC but it is unconfirmed yet.  We'll "+do_what+" as soon as it gets at least "+MIN_CONFIRMATIONS+" confirmations.");
+								updateState(row.device_address, 'waiting_for_confirmations');
 							}
 						);
 					}
