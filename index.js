@@ -255,6 +255,8 @@ eventBus.on('new_my_transactions', function(arrUnits){
 		[arrUnits],
 		function(rows){
 			rows.forEach(function(row){
+				if (book.bytes2satoshis(row.amount, row.sell_price || instant.getSellRate()) < 6000) // below dust limit
+					return device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(row.amount/1e9)+" GB but it is too small to be exchanged, will be ignored.");
 				db.query(
 					"INSERT INTO byte_seller_deposits (byte_seller_binding_id, unit, byte_amount) VALUES (?,?,?)", 
 					[row.byte_seller_binding_id, row.unit, row.amount],

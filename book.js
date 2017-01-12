@@ -11,14 +11,17 @@ const FEE = 0.002;
 
 function satoshis2bytes(satoshi_amount, price){
 	if (!satoshi_amount || !price)
-		throw Error('wrong inputs to satoshis2bytes');
+		throw Error('wrong inputs to satoshis2bytes amount='+satoshi_amount+', price='+price);
 	return Math.round(10 * satoshi_amount / price);
 }
 
 function bytes2satoshis(byte_amount, price){
 	if (!byte_amount || !price)
-		throw Error('wrong inputs to bytes2satoshis');
-	return Math.round(byte_amount * price / 10);
+		throw Error('wrong inputs to bytes2satoshis amount='+byte_amount+', price='+price);
+	var satoshis = Math.round(byte_amount * price / 10);
+	if (satoshis <= 0)
+		throw Error('satoshis = '+satoshis);
+	return satoshis;
 }
 
 function finishBuyerDeposit(conn, byte_buyer_deposit_id, fee_satoshi_amount, net_satoshi_amount, onDone){
