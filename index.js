@@ -20,6 +20,7 @@ var desktopApp = require('byteballcore/desktop_app.js');
 var headlessWallet = require('headless-byteball');
 
 const MIN_CONFIRMATIONS = 2;
+const MIN_SATOSHIS = 50000; // typical fee is 0.0002 BTC = 20000 sat
 
 var bTestnet = constants.version.match(/t$/);
 var wallet;
@@ -255,8 +256,15 @@ eventBus.on('new_my_transactions', function(arrUnits){
 		[arrUnits],
 		function(rows){
 			rows.forEach(function(row){
-				if (book.bytes2satoshis(row.amount, row.sell_price || instant.getSellRate()) < 6000) // below dust limit
+			//	if (book.bytes2satoshis(row.amount, row.sell_price || instant.getSellRate()) < 6000) // below dust limit
+				if (book.bytes2satoshis(row.amount, row.sell_price || instant.getSellRate()) < MIN_SATOSHIS){ // would burn our profit into BTC fees
+					db.query(
+						"INSERT INTO byte_seller_deposits (byte_seller_binding_id, unit, byte_amount, fee_byte_amount, net_byte_amount, finality_date) \n\
+						VALUES (?,?, ?,?,0, "+db.getNow()+")", 
+						[row.byte_seller_binding_id, row.unit, row.amount, row.amount]
+					);
 					return device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(row.amount/1e9)+" GB but it is too small to be exchanged, will be ignored.");
+				}
 				db.query(
 					"INSERT INTO byte_seller_deposits (byte_seller_binding_id, unit, byte_amount) VALUES (?,?,?)", 
 					[row.byte_seller_binding_id, row.unit, row.amount],
@@ -576,7 +584,7 @@ function initChat(exchangeService){
 						var will_do_text = buy_price 
 							? 'Your bitcoins will be added to the [book](command:book) at '+buy_price+' BTC/GB when the payment has at least '+MIN_CONFIRMATIONS+' confirmations.  You\'ll be able to increase the price at any time by typing "buy at <new price>".' 
 							: "Your bitcoins will be exchanged when the payment has at least "+MIN_CONFIRMATIONS+" confirmations, at the rate actual for that time, which may differ from the current rate.";
-						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your bytes to "+out_byteball_address+".  Now please pay BTC to "+to_bitcoin_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_BTC+" BTC.  "+will_do_text);
+						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your bytes to "+out_byteball_address+".  Now please pay BTC to "+to_bitcoin_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_BTC+" BTC, minimum is "+(MIN_SATOSHIS/1e8)+" BTC.  "+will_do_text);
 					});
 					updateState(from_address, 'waiting_for_payment');
 					exchangeService.bus.subscribe('bitcoind/addresstxid', [to_bitcoin_address]);
@@ -594,7 +602,7 @@ function initChat(exchangeService){
 						var will_do_text = sell_price 
 							? 'Your bytes will be added to the [book](command:book) at '+sell_price+' BTC/GB when the payment is final.  You\'ll be able to decrease the price at any time by typing "sell at <new price>".' 
 							: "Your bytes will be exchanged when the payment is final, at the rate actual for that time, which may differ from the current rate.";
-						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your BTC to "+out_bitcoin_address+".  Now please pay bytes to "+to_byteball_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_GB+" GB.  "+will_do_text);
+						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your BTC to "+out_bitcoin_address+".  Now please pay bytes to "+to_byteball_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_GB+" GB, minimum is "+(MIN_SATOSHIS/1e8)+" BTC worth.  "+will_do_text);
 					});
 					updateState(from_address, 'waiting_for_payment');
 				});
@@ -664,6 +672,15 @@ function initChat(exchangeService){
 						if (rows.length > 1)
 							throw Error("more than 1 row per to btc address");
 						var row = rows[0];
+						if (received_satoshis < MIN_SATOSHIS){ // would burn our profit into BTC fees
+							db.query(
+								"INSERT "+db.getIgnore()+" INTO byte_buyer_deposits \n\
+								(byte_buyer_binding_id, txid, satoshi_amount, fee_satoshi_amount, net_satoshi_amount, confirmation_date) \n\
+								VALUES (?,?, ?,?,0, "+db.getNow()+")", 
+								[row.byte_buyer_binding_id, txid, received_satoshis, received_satoshis]
+							);
+							return device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(received_satoshis/1e8)+" BTC but it is too small to be exchanged, will be ignored.");
+						}
 						db.query(
 							"INSERT "+db.getIgnore()+" INTO byte_buyer_deposits \n\
 							(byte_buyer_binding_id, txid, satoshi_amount, count_confirmations) VALUES(?,?,?,?)", 
