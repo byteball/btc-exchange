@@ -217,7 +217,7 @@ function checkSolvency(){
 				db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
 					var owed_bytes = rows[0].owed_bytes || 0;
 					if (owed_satoshis > btc_balance*1e8 || owed_bytes > byte_balance)
-						notifications.notifyAdmin("Solvency check failed:\n"+balance+' BTC\n'+(owed_satoshis/1e8)+' BTC owed\n'+byte_balance+' bytes\n'+owed_bytes+' bytes owed');
+						notifications.notifyAdmin("Solvency check failed:\n"+btc_balance+' BTC\n'+(owed_satoshis/1e8)+' BTC owed\n'+byte_balance+' bytes\n'+owed_bytes+' bytes owed');
 				});
 			});
 		});
