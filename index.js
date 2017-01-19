@@ -511,14 +511,14 @@ function initChat(exchangeService){
 							arrSuggestions.push('[Buy at '+ask+' BTC/GB](command:buy at '+ask+') - fast');
 						if (bid){
 							var front_runninng_bid = bid + STEP;
-							if (ask && front_runninng_bid > ask)
+							if (ask && front_runninng_bid >= ask)
 								front_runninng_bid = bid;
 							arrSuggestions.push('[Buy at '+front_runninng_bid+' BTC/GB](command:buy at '+front_runninng_bid+') - have to wait');
 							arrSuggestions.push('[Sell at '+bid+' BTC/GB](command:sell at '+bid+') - fast');
 						}
 						if (ask){
 							var front_runninng_ask = ask - STEP;
-							if (bid && front_runninng_ask < bid)
+							if (bid && front_runninng_ask <= bid)
 								front_runninng_ask = ask;
 							arrSuggestions.push('[Sell at '+front_runninng_ask+' BTC/GB](command:sell at '+front_runninng_ask+') - have to wait');
 						}
