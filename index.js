@@ -539,7 +539,7 @@ function initChat(exchangeService){
 					FROM byte_seller_orders WHERE is_active=1 "+and_device+" \n\
 					GROUP BY price \n\
 					UNION ALL \n\
-					SELECT price, 'buy' AS order_type, SUM(satoshi_amount)/1e8/price AS total \n\
+					SELECT price, 'buy' AS order_type, ROUND(SUM(satoshi_amount)/1e8/price, 9) AS total \n\
 					FROM byte_buyer_orders WHERE is_active=1 "+and_device+" \n\
 					GROUP BY price \n\
 					ORDER BY price DESC",
