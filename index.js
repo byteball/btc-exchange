@@ -551,6 +551,8 @@ function initChat(exchangeService){
 				);
 				return;
 			}
+			if (lc_text === 'help')
+				return device.sendMessageToDevice(from_address, 'text', "List of commands:\n[book](command:book): see the order book;\n[orders](command:orders): see your orders;\n[rates](command:rates): see buy and sell rates for instant exchange;\n[buy](command:buy): buy at instant rate;\n[sell](command:sell): sell at instant rate;\n[set price](command:set price): see suggested buy and sell prices;\nbuy at <price>: add a limit buy order at <price> or change the price of the existing buy orders;\nsell at <price>: add a limit sell order at <price> or change the price of the existing sell orders.");
 			
 			var bSetNewPrice = false;
 			var arrMatches = lc_text.match(/(buy|sell) at ([\d.]+)/);
