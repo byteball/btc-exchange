@@ -141,8 +141,11 @@ function updateInstantRates(){
 		var accumulated_bytes = 0;
 		var bFound = false;
 		var price;
+		var max_price = SAFE_BUY_RATE;
 		for (var i=0; i<rows.length; i++){
 			price = rows[i].price;
+			if (price > max_price)
+				max_price = price;
 			accumulated_bytes += rows[i].byte_amount;
 			if (accumulated_bytes >= MAX_GB*1e9){
 				bFound = true;
@@ -150,7 +153,7 @@ function updateInstantRates(){
 			}
 		}
 		if (!bFound){
-			buy_rate = SAFE_BUY_RATE;
+			buy_rate = max_price;
 			return notifications.notifyAdmin('not enough sell-side liquidity');
 		}
 		buy_rate = Math.round(price*(1+INSTANT_MARGIN)*10000)/10000;
@@ -159,8 +162,11 @@ function updateInstantRates(){
 		var accumulated_satoshis = 0;
 		var bFound = false;
 		var price;
+		var min_price = SAFE_SELL_RATE;
 		for (var i=0; i<rows.length; i++){
 			price = rows[i].price;
+			if (price < min_price)
+				min_price = price;
 			accumulated_satoshis += rows[i].satoshi_amount;
 			if (accumulated_satoshis >= MAX_BTC*1e8){
 				bFound = true;
@@ -168,7 +174,7 @@ function updateInstantRates(){
 			}
 		}
 		if (!bFound){
-			sell_rate = SAFE_SELL_RATE;
+			sell_rate = min_price;
 			return notifications.notifyAdmin('not enough buy-side liquidity');
 		}
 		sell_rate = Math.round(price/(1+INSTANT_MARGIN)*10000)/10000;
