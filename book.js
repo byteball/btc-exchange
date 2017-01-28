@@ -19,8 +19,8 @@ function bytes2satoshis(byte_amount, price){
 	if (!byte_amount || !price)
 		throw Error('wrong inputs to bytes2satoshis amount='+byte_amount+', price='+price);
 	var satoshis = Math.round(byte_amount * price / 10);
-	if (satoshis <= 0)
-		throw Error('satoshis = '+satoshis);
+//	if (satoshis <= 0)
+//		throw Error('satoshis = '+satoshis);
 	return satoshis;
 }
 
@@ -175,6 +175,8 @@ function match(conn, onDone){
 			else{
 				transacted_bytes = seller_order.byte_amount;
 				transacted_satoshis = bytes2satoshis(transacted_bytes, execution_price);
+				if (transacted_satoshis === 0)
+					throw Error("transacted_satoshis = 0");
 			}
 			var buyer_order_props = {
 				execution_price: execution_price, 

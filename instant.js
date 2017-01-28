@@ -31,6 +31,8 @@ function getSellRate(){
 
 function handleInstantSellOrder(conn, byte_seller_deposit_id, byte_amount, device_address, onDone){
 	var satoshi_amount = book.bytes2satoshis(byte_amount, sell_rate);
+	if (satoshi_amount === 0)
+		throw Error("satoshi_amount=0");
 	conn.query("SELECT * FROM byte_buyer_orders WHERE is_active=1 AND price>=? ORDER BY price DESC, last_update ASC", [sell_rate], function(buyer_rows){
 		var total_satoshi = buyer_rows.reduce(function(acc, buyer_order){ return acc + buyer_order.satoshi_amount; }, 0);
 		if (total_satoshi < satoshi_amount){
@@ -108,6 +110,8 @@ function handleInstantBuyOrder(conn, byte_buyer_deposit_id, satoshi_amount, devi
 							var bDone = (remaining_byte_amount <= seller_order.byte_amount);
 							var transacted_bytes = bFull ? seller_order.byte_amount : remaining_byte_amount;
 							var transacted_satoshis = book.bytes2satoshis(transacted_bytes, execution_price);
+							if (transacted_satoshis === 0)
+								throw Error("transacted_satoshis=0");
 							var seller_order_props = {
 								execution_price: execution_price, 
 								transacted_satoshis: transacted_satoshis, 
