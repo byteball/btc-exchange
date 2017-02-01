@@ -2,7 +2,7 @@
 	"name": "btc-exchange",
 	"description": "Byte-to-BTC exchange",
 	"author": "Byteball",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"main": "index.js",
 	"keywords": [
 		"exchange",
