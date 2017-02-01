@@ -569,8 +569,10 @@ function initChat(exchangeService){
 						}
 						updateCurrentPrice(from_address, order_type, price);
 						var response = (order_type === 'buy' ? 'Buying' : 'Selling')+' at '+price+' BTC/GB.';
-						if (!best_price)
+						if (!best_price){
 							response += '.\n' + (order_type === 'buy' ? "Please let me know your Byteball address (just click \"Insert my address\" button)." : "Please let me know your Bitcoin address.");
+							updateState(from_address, (order_type === 'buy') ? 'waiting_for_byteball_address' : 'waiting_for_bitcoin_address');
+						}
 						device.sendMessageToDevice(from_address, 'text', response);
 					});
 					bSetNewPrice = true;
