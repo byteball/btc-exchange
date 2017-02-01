@@ -485,7 +485,7 @@ function initChat(exchangeService){
 			console.log('state='+state);
 			
 			if (lc_text === 'buy'){
-				device.sendMessageToDevice(from_address, 'text', "Please let me know your Byteball address (just click \"Insert my address\" button).");
+				device.sendMessageToDevice(from_address, 'text', "Please let me know your Byteball address (just click \"...\" button and select \"Insert my address\").");
 				updateCurrentPrice(from_address, 'buy', null);
 				updateState(from_address, 'waiting_for_byteball_address');
 				return;
@@ -570,7 +570,7 @@ function initChat(exchangeService){
 						updateCurrentPrice(from_address, order_type, price);
 						var response = (order_type === 'buy' ? 'Buying' : 'Selling')+' at '+price+' BTC/GB.';
 						if (!best_price){
-							response += '.\n' + (order_type === 'buy' ? "Please let me know your Byteball address (just click \"Insert my address\" button)." : "Please let me know your Bitcoin address.");
+							response += '.\n' + (order_type === 'buy' ? "Please let me know your Byteball address (just click \"...\" button and select \"Insert my address\")." : "Please let me know your Bitcoin address.");
 							updateState(from_address, (order_type === 'buy') ? 'waiting_for_byteball_address' : 'waiting_for_bitcoin_address');
 						}
 						device.sendMessageToDevice(from_address, 'text', response);
@@ -596,7 +596,7 @@ function initChat(exchangeService){
 				return;
 			}
 			else if (state === 'waiting_for_byteball_address' && !bSetNewPrice)
-				return device.sendMessageToDevice(from_address, 'text', "This doesn't look like a valid Byteball address.  Please use \"Insert my address\" button at the bottom of the screen, then hit \"Send\".");
+				return device.sendMessageToDevice(from_address, 'text', "This doesn't look like a valid Byteball address.  Please click \"...\" button at the bottom of the screen and select \"Insert my address\", then hit \"Send\" button.");
 			
 			var bValidBitcoinAddress = bitcore.Address.isValid(text, bitcoinNetwork);
 			if (bValidBitcoinAddress){
