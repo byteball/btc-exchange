@@ -206,13 +206,19 @@ function exchangeBtcToBytesUnderLock(byte_buyer_deposit_id){
 	});
 }
 
+function getBtcBalance(count_confirmations, handleBalance){
+	client.getBalance('*', count_confirmations, function(err, btc_balance, resHeaders) {
+		if (err)
+			throw Error("getBalance "+count_confirmations+" failed: "+err);
+		handleBalance(btc_balance);
+	});
+}
+
 function checkSolvency(){
 	var Wallet = require('byteballcore/wallet.js');
 	Wallet.readBalance(wallet, function(assocBalances){
 		var byte_balance = assocBalances['base'].stable + assocBalances['base'].pending;
-		client.getBalance('*', 0, function(err, btc_balance, resHeaders) {
-			if (err)
-				throw Error(err);
+		getBtcBalance(0, function(btc_balance) {
 			db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function(rows){
 				var owed_satoshis = rows[0].owed_satoshis || 0;
 				db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
@@ -468,9 +474,7 @@ function initChat(exchangeService){
 		
 		if (headlessWallet.isControlAddress(from_address)){
 			if (lc_text === 'balance')
-				return client.getBalance('*', 0, function(err, balance, resHeaders) {
-					if (err)
-						throw Error(err);
+				return getBtcBalance(0, function(balance) {
 					db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function(rows){
 						var owed_satoshis = rows[0].owed_satoshis || 0;
 						db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
