@@ -475,11 +475,17 @@ function initChat(exchangeService){
 		if (headlessWallet.isControlAddress(from_address)){
 			if (lc_text === 'balance')
 				return getBtcBalance(0, function(balance) {
-					db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function(rows){
-						var owed_satoshis = rows[0].owed_satoshis || 0;
-						db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
-							var owed_bytes = rows[0].owed_bytes || 0;
-							device.sendMessageToDevice(from_address, 'text', balance+' BTC\n'+(owed_satoshis/1e8)+' BTC owed\n'+owed_bytes+' bytes owed');
+					return getBtcBalance(1, function(confirmed_balance) {
+						var unconfirmed_balance = balance - confirmed_balance;
+						var btc_balance_str = balance+' BTC';
+						if (unconfirmed_balance)
+							btc_balance_str += ' ('+unconfirmed_balance+' unconfirmed)';
+						db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function(rows){
+							var owed_satoshis = rows[0].owed_satoshis || 0;
+							db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
+								var owed_bytes = rows[0].owed_bytes || 0;
+								device.sendMessageToDevice(from_address, 'text', btc_balance_str+'\n'+(owed_satoshis/1e8)+' BTC owed\n'+owed_bytes+' bytes owed');
+							});
 						});
 					});
 				});
