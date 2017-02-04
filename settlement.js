@@ -16,7 +16,7 @@ var notifications = require('./notifications.js');
 function sendBtc(amount, address, onDone){
 	client.sendToAddress(address, amount, function(err, txid, resHeaders) {
 		console.log('bitcoin sendToAddress '+address+', amount '+amount+', txid '+txid+', err '+err);
-		if (err === 'Error: Transaction amount too small'){
+		if (err && err+'' === 'Error: Transaction amount too small'){
 			err = null;
 			txid = 'too small';
 		}
