@@ -495,13 +495,13 @@ function initChat(exchangeService){
 			console.log('state='+state);
 			
 			if (lc_text === 'buy'){
-				device.sendMessageToDevice(from_address, 'text', "Please let me know your Byteball address (just click \"...\" button and select \"Insert my address\").");
+				device.sendMessageToDevice(from_address, 'text', "Buying at "+instant.getBuyRate()+" BTC/GB.  Please let me know your Byteball address (just click \"...\" button and select \"Insert my address\").");
 				updateCurrentPrice(from_address, 'buy', null);
 				updateState(from_address, 'waiting_for_byteball_address');
 				return;
 			}
 			if (lc_text === 'sell'){
-				device.sendMessageToDevice(from_address, 'text', "Please let me know your Bitcoin address.");
+				device.sendMessageToDevice(from_address, 'text', "Selling at "+instant.getSellRate()+" BTC/GB.  Please let me know your Bitcoin address.");
 				updateCurrentPrice(from_address, 'sell', null);
 				updateState(from_address, 'waiting_for_bitcoin_address');
 				return;
