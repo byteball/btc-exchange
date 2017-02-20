@@ -700,6 +700,7 @@ function initChat(exchangeService){
 							(byte_buyer_binding_id, txid, satoshi_amount, count_confirmations) VALUES(?,?,?,?)", 
 							[row.byte_buyer_binding_id, txid, received_satoshis, count_confirmations], 
 							function(res){
+								console.log('byte_buyer_deposits res: '+JSON.stringify(res));
 								if (!res.insertId)
 									return console.log("duplicate transaction");
 								if (count_confirmations >= MIN_CONFIRMATIONS)
