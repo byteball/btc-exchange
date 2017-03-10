@@ -73,10 +73,14 @@ function updateCurrentPrice(device_address, order_type, price, onDone){
 		db.query("UPDATE current_prices SET "+order_type+"_price=? WHERE device_address=?", [price, device_address], function(){
 			if (!price)
 				return onDone();
-			db.query("UPDATE byte_"+order_type+"er_orders SET price=? WHERE device_address=? AND is_active=1", [price, device_address], function(){
-				onDone();
-				book.matchUnderLock();
-			});
+			db.query(
+				"UPDATE byte_"+order_type+"er_orders SET price=?, last_update="+db.getNow()+" WHERE device_address=? AND is_active=1", 
+				[price, device_address], 
+				function(){
+					onDone();
+					book.matchUnderLock();
+				}
+			);
 		});
 	});
 }
