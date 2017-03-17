@@ -2,7 +2,7 @@
 	"name": "btc-exchange",
 	"description": "Byte-to-BTC exchange",
 	"author": "Byteball",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"main": "index.js",
 	"keywords": [
 		"exchange",
@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"headless-byteball": "git+https://github.com/byteball/headless-byteball.git",
-		"byteballcore": "^0.1.34",
+		"byteballcore": "^0.2.1",
 		"bitcore-lib": "^0.13.14",
 		"bitcoin": "^3.0.1"
 	}
