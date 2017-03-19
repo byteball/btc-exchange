@@ -601,7 +601,7 @@ function initChat(exchangeService){
 					readCurrentPrices(from_address, function(buy_price, sell_price){
 						var will_do_text = buy_price 
 							? 'Your bitcoins will be added to the [book](command:book) at '+buy_price+' BTC/GB when the payment has at least '+MIN_CONFIRMATIONS+' confirmations.  You\'ll be able to increase the price at any time by typing "buy at <new price>".' 
-							: "Your bitcoins will be exchanged when the payment has at least "+MIN_CONFIRMATIONS+" confirmations, at the rate actual for that time, which may differ from the current rate.";
+							: "Your bitcoins will be exchanged when the payment has at least "+MIN_CONFIRMATIONS+" confirmations, at the rate actual for that time, which may differ from the current rate ("+instant.getBuyRate()+" BTC/GB).";
 						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your bytes to "+out_byteball_address+".  Now please pay BTC to "+to_bitcoin_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_BTC+" BTC, minimum is "+(MIN_SATOSHIS/1e8)+" BTC.  "+will_do_text);
 					});
 					updateState(from_address, 'waiting_for_payment');
@@ -619,7 +619,7 @@ function initChat(exchangeService){
 					readCurrentPrices(from_address, function(buy_price, sell_price){
 						var will_do_text = sell_price 
 							? 'Your bytes will be added to the [book](command:book) at '+sell_price+' BTC/GB when the payment is final.  You\'ll be able to decrease the price at any time by typing "sell at <new price>".' 
-							: "Your bytes will be exchanged when the payment is final, at the rate actual for that time, which may differ from the current rate.";
+							: "Your bytes will be exchanged when the payment is final, at the rate actual for that time, which may differ from the current rate ("+instant.getSellRate()+" BTC/GB).";
 						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your BTC to "+out_bitcoin_address+".  Now please pay bytes to "+to_byteball_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_GB+" GB, minimum is "+(MIN_SATOSHIS/1e8)+" BTC worth.  "+will_do_text);
 					});
 					updateState(from_address, 'waiting_for_payment');
