@@ -118,8 +118,13 @@ function markSellerOrderMatched(conn, byte_seller_order_id, props, onDone){
 
 function insertRemainderBuyerOrder(conn, buyer_order, transacted_satoshis, onDone){
 	var satoshis_left = buyer_order.satoshi_amount - transacted_satoshis;
-	if (satoshis_left <= 0)
+	if (satoshis_left <= 0){
+		if (satoshis_left === 0){
+			console.log("0 satoshis left after rounding");
+			return onDone();
+		}
 		throw Error('satoshis left '+satoshis_left);
+	}
 	conn.query(
 		"INSERT INTO byte_buyer_orders \n\
 		(byte_buyer_deposit_id, device_address, satoshi_amount, price, prev_byte_buyer_order_id, last_update) VALUES (?,?, ?,?, ?,?)", 
