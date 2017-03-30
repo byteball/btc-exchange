@@ -10,7 +10,7 @@ var client = new bitcoin.Client({
 	port: bTestnet ? 18332 : 8332,
 	user: 'bitcoin',
 	pass: 'local321',
-	timeout: 30000
+	timeout: 60000
 });
 
 module.exports = client;
