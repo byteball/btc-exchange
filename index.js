@@ -210,10 +210,19 @@ function exchangeBtcToBytesUnderLock(byte_buyer_deposit_id){
 	});
 }
 
-function getBtcBalance(count_confirmations, handleBalance){
+function getBtcBalance(count_confirmations, handleBalance, counter){
 	client.getBalance('*', count_confirmations, function(err, btc_balance, resHeaders) {
-		if (err)
-			throw Error("getBalance "+count_confirmations+" failed: "+err);
+		if (err){
+			// retry up to 3 times
+			if (counter >= 3)
+				throw Error("getBalance "+count_confirmations+" failed: "+err);
+			counter = counter || 0;
+			console.log('getBalance attempt #'+counter+' failed: '+err);
+			setTimeout( () => {
+				getBtcBalance(count_confirmations, handleBalance, counter + 1);
+			}, 60*1000);
+			return;
+		}
 		handleBalance(btc_balance);
 	});
 }
