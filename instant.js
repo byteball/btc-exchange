@@ -11,7 +11,7 @@ var eventBus = require('byteballcore/event_bus.js');
 const INSTANT_MARGIN = 0.02;
 
 const MAX_BTC = 0.2;
-const MAX_GB = 10;
+const MAX_GB = 1;
 
 // from customer's perspective, BTC/GB
 const SAFE_BUY_RATE = 0.04;
