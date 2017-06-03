@@ -546,7 +546,7 @@ function initChat(exchangeService){
 							arrSuggestions.push('[Sell at '+front_runninng_ask+' BTC/GB](command:sell at '+front_runninng_ask+') - have to wait');
 						}
 						var start_of_sentence = (arrSuggestions.length === 0) ? 'T' : 'Or, see the [book](command:book) and t';
-						arrSuggestions.push(start_of_sentence+'ype your price, for example "buy at <price>" or "sell at <price>". The lower your buy price, or the higher your sell price, the longer you\'ll have to wait.\n\nAfter your order is added to the [book](command:book), you\'ll be able to increase buy price or decrease sell price but you can\'t withdraw the original funds without completing an exchange.  Deposit fee is '+book.FEE_PERCENT+'% and it is the only fee charged.');
+						arrSuggestions.push(start_of_sentence+'ype your price, for example "buy at <price>" or "sell at <price>". The lower your buy price, or the higher your sell price, the longer you\'ll have to wait.\n\nAfter your order is added to the [book](command:book), you\'ll be able to change your price but you can\'t withdraw the original funds without completing an exchange.  Deposit fee is '+book.FEE_PERCENT+'% and it is the only fee charged.');
 						device.sendMessageToDevice(from_address, 'text', arrSuggestions.join('\n'));
 					});
 				});
@@ -584,12 +584,12 @@ function initChat(exchangeService){
 				var price = parseFloat(arrMatches[2]);
 				if (price){
 					readCurrentOrderPrice(from_address, order_type, function(best_price){
-						if (best_price){
+						/*if (best_price){
 							if (order_type === 'buy' && price < best_price)
 								return device.sendMessageToDevice(from_address, 'text', "Buy price of existing orders can only be increased");
 							if (order_type === 'sell' && price > best_price)
 								return device.sendMessageToDevice(from_address, 'text', "Sell price of existing orders can only be decreased");
-						}
+						}*/
 						updateCurrentPrice(from_address, order_type, price);
 						var response = (order_type === 'buy' ? 'Buying' : 'Selling')+' at '+price+' BTC/GB.';
 						if (!best_price){
@@ -609,7 +609,7 @@ function initChat(exchangeService){
 				assignOrReadDestinationBitcoinAddress(from_address, out_byteball_address, function(to_bitcoin_address){
 					readCurrentPrices(from_address, function(buy_price, sell_price){
 						var will_do_text = buy_price 
-							? 'Your bitcoins will be added to the [book](command:book) at '+buy_price+' BTC/GB when the payment has at least '+MIN_CONFIRMATIONS+' confirmations.  You\'ll be able to increase the price at any time by typing "buy at <new price>".' 
+							? 'Your bitcoins will be added to the [book](command:book) at '+buy_price+' BTC/GB when the payment has at least '+MIN_CONFIRMATIONS+' confirmations.  You\'ll be able to change the price at any time by typing "buy at <new price>".' 
 							: "Your bitcoins will be exchanged when the payment has at least "+MIN_CONFIRMATIONS+" confirmations, at the rate actual for that time, which may differ from the current rate ("+instant.getBuyRate()+" BTC/GB).";
 						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your bytes to "+out_byteball_address+".  Now please pay BTC to "+to_bitcoin_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_BTC+" BTC, minimum is "+(MIN_SATOSHIS/1e8)+" BTC.  "+will_do_text);
 					});
@@ -627,7 +627,7 @@ function initChat(exchangeService){
 				assignOrReadDestinationByteballAddress(from_address, out_bitcoin_address, function(to_byteball_address){
 					readCurrentPrices(from_address, function(buy_price, sell_price){
 						var will_do_text = sell_price 
-							? 'Your bytes will be added to the [book](command:book) at '+sell_price+' BTC/GB when the payment is final.  You\'ll be able to decrease the price at any time by typing "sell at <new price>".' 
+							? 'Your bytes will be added to the [book](command:book) at '+sell_price+' BTC/GB when the payment is final.  You\'ll be able to change the price at any time by typing "sell at <new price>".' 
 							: "Your bytes will be exchanged when the payment is final, at the rate actual for that time, which may differ from the current rate ("+instant.getSellRate()+" BTC/GB).";
 						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your BTC to "+out_bitcoin_address+".  Now please pay bytes to "+to_byteball_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_GB+" GB, minimum is "+(MIN_SATOSHIS/1e8)+" BTC worth.  "+will_do_text);
 					});
