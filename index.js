@@ -569,6 +569,11 @@ function initChat(exchangeService){
 					params,
 					function(rows){
 						var arrLines = rows.map(row => "At "+row.price+" BTC/GB "+row.order_type+" vol. "+row.total+" GB");
+						if (lc_text === 'book'){
+							let firstBuyIndex = rows.findIndex(row => { return (row.order_type === 'buy'); });
+							if (firstBuyIndex >= 0)
+								arrLines.splice(firstBuyIndex, 0, '');
+						}
 						device.sendMessageToDevice(from_address, 'text', arrLines.join("\n") || "No orders at this time.");
 					}
 				);
