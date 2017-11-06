@@ -314,8 +314,8 @@ eventBus.on('mci_became_stable', function(mci){
 					);
 					if (rows.length === 0){ // if failed to pay due to unconfirmed funds, try again
 						db.query(
-							"SELECT 1 FROM my_addresses JOIN outputs USING(address) JOIN units USING(unit) \n\
-							WHERE is_spent=0 AND is_stable=0 AND asset IS NULL", 
+							"SELECT 1 FROM units CROSS JOIN outputs USING(unit) CROSS JOIN my_addresses USING(address) \n\
+							WHERE is_spent=0 AND is_stable=0 AND asset IS NULL LIMIT 1", 
 							function(unstable_rows){
 								if (unstable_rows.length > 0)
 									return;
