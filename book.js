@@ -6,7 +6,7 @@ var db = require('byteballcore/db.js');
 var mutex = require('byteballcore/mutex.js');
 var eventBus = require('byteballcore/event_bus.js');
 
-const FEE = 0.002;
+const FEE = conf.FEE || 0.002;
 
 
 function satoshis2bytes(satoshi_amount, price){
