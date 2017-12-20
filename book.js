@@ -2,6 +2,7 @@
 'use strict';
 var notifications = require('./notifications.js');
 var settlement = require('./settlement.js');
+var conf = require('byteballcore/conf.js');
 var db = require('byteballcore/db.js');
 var mutex = require('byteballcore/mutex.js');
 var eventBus = require('byteballcore/event_bus.js');
