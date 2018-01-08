@@ -20,7 +20,7 @@ var desktopApp = require('byteballcore/desktop_app.js');
 var headlessWallet = require('headless-byteball');
 
 const MIN_CONFIRMATIONS = 2;
-const MIN_SATOSHIS = 50000; // typical fee is 0.0002 BTC = 20000 sat
+const MIN_SATOSHIS = 100000; // typical fee is 0.0004 BTC = 40000 sat
 
 var bTestnet = constants.version.match(/t$/);
 var wallet;
@@ -616,7 +616,8 @@ function initChat(exchangeService){
 						var will_do_text = buy_price 
 							? 'Your bitcoins will be added to the [book](command:book) at '+buy_price+' BTC/GB when the payment has at least '+MIN_CONFIRMATIONS+' confirmations.  You\'ll be able to change the price at any time by typing "buy at <new price>".' 
 							: "Your bitcoins will be exchanged when the payment has at least "+MIN_CONFIRMATIONS+" confirmations, at the rate actual for that time, which may differ from the current rate ("+instant.getBuyRate()+" BTC/GB).";
-						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your bytes to "+out_byteball_address+".  Now please pay BTC to "+to_bitcoin_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_BTC+" BTC, minimum is "+(MIN_SATOSHIS/1e8)+" BTC.  "+will_do_text);
+						var maximum_text = buy_price ? "" : "maximum amount is "+instant.MAX_BTC+" BTC,";
+						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your bytes to "+out_byteball_address+".  Now please pay BTC to "+to_bitcoin_address+".  We'll exchange as much as you pay, but the "+maximum_text+" minimum is "+(MIN_SATOSHIS/1e8)+" BTC.  "+will_do_text);
 					});
 					updateState(from_address, 'waiting_for_payment');
 					exchangeService.bus.subscribe('bitcoind/addresstxid', [to_bitcoin_address]);
@@ -634,7 +635,8 @@ function initChat(exchangeService){
 						var will_do_text = sell_price 
 							? 'Your bytes will be added to the [book](command:book) at '+sell_price+' BTC/GB when the payment is final.  You\'ll be able to change the price at any time by typing "sell at <new price>".' 
 							: "Your bytes will be exchanged when the payment is final, at the rate actual for that time, which may differ from the current rate ("+instant.getSellRate()+" BTC/GB).";
-						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your BTC to "+out_bitcoin_address+".  Now please pay bytes to "+to_byteball_address+".  We'll exchange as much as you pay, but the maximum amount is "+instant.MAX_GB+" GB, minimum is "+(MIN_SATOSHIS/1e8)+" BTC worth.  "+will_do_text);
+						var maximum_text = sell_price ? "" : "maximum amount is "+instant.MAX_GB+" GB,";
+						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your BTC to "+out_bitcoin_address+".  Now please pay bytes to "+to_byteball_address+".  We'll exchange as much as you pay, but the "+maximum_text+" minimum is "+(MIN_SATOSHIS/1e8)+" BTC worth.  "+will_do_text);
 					});
 					updateState(from_address, 'waiting_for_payment');
 				});
