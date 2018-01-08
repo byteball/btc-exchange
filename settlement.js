@@ -46,7 +46,7 @@ function settleInstantBtc(){
 								function(){
 									sendBtc(row.satoshi_amount/1e8, row.out_bitcoin_address, function(err, _txid){
 										if (err){
-											notifications.notifyAdminAboutFailedPayment(err);
+											notifications.notifyAdminAboutFailedPayment("sending instant "+(row.satoshi_amount/1e8)+" BTC to "+row.out_bitcoin_address+": "+err);
 											return onTransactionDone(err); // would rollback
 										}
 										txid = _txid;
@@ -98,7 +98,7 @@ function settleBookBtc(){
 								function(){
 									sendBtc(row.satoshi_amount/1e8, row.out_bitcoin_address, function(err, _txid){
 										if (err){
-											notifications.notifyAdminAboutFailedPayment(err);
+											notifications.notifyAdminAboutFailedPayment("sending book "+(row.satoshi_amount/1e8)+" BTC to "+row.out_bitcoin_address+": "+err);
 											return onTransactionDone(err); // would rollback
 										}
 										txid = _txid;
