@@ -20,7 +20,7 @@ var desktopApp = require('byteballcore/desktop_app.js');
 var headlessWallet = require('headless-byteball');
 
 const MIN_CONFIRMATIONS = 2;
-const MIN_SATOSHIS = 100000; // typical fee is 0.0004 BTC = 40000 sat
+const MIN_SATOSHIS = 200000; // typical fee is 0.0008 BTC = 80000 sat
 
 var bTestnet = constants.version.match(/t$/);
 var wallet;
