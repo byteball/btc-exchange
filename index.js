@@ -86,47 +86,70 @@ function updateCurrentPrice(device_address, order_type, price, onDone){
 }
 
 function assignOrReadDestinationBitcoinAddress(device_address, out_byteball_address, handleBitcoinAddress){
-	db.query("SELECT to_bitcoin_address FROM byte_buyer_bindings WHERE out_byteball_address=?", [out_byteball_address], function(rows){
-		if (rows.length > 0) // already know this byteball address
-			return handleBitcoinAddress(rows[0].to_bitcoin_address);
-		// generate new address
-		mutex.lock(["new_bitcoin_address"], function(unlock){
-			client.getNewAddress(function(err, to_bitcoin_address, resHeaders) {
-				if (err)
-					throw Error(err);
+	// We need a transaction here, because otherwise when the bot
+	// or the chat network is slow, impatient users can register
+	// two (or more) addresses byteball address for the same
+	// incoming bitcoin address.  If then they send money to the
+	// one which is not the final address in the DB, that bitcoin
+	// is lost.  Therefore we need to make sure, that always only
+	// one byteball address is registered for a bitcoin address,
+	// which we can do with a transaction around the
+	// SELECT+INSERT.
+	db.executeInTransaction(function(conn, onTransactionDone) {
+		conn.query("SELECT to_bitcoin_address FROM byte_buyer_bindings WHERE out_byteball_address=?", [out_byteball_address], function(rows){
+			if (rows.length > 0) // already know this byteball address
+				return onTransactionDone(function() {
+					handleBitcoinAddress(rows[0].to_bitcoin_address);
+				});
+			// generate new address
+			mutex.lock(["new_bitcoin_address"], function(unlock){
+				client.getNewAddress(function(err, to_bitcoin_address, resHeaders) {
+					if (err)
+						throw Error(err);
 				console.log('BTC Address:', to_bitcoin_address);
-				db.query(
-					"INSERT "+db.getIgnore()+" INTO byte_buyer_bindings \n\
-					(device_address, out_byteball_address, to_bitcoin_address) VALUES (?,?,?)", 
-					[device_address, out_byteball_address, to_bitcoin_address],
-					function(){
-						unlock();
-						handleBitcoinAddress(to_bitcoin_address);
-					}
-				);
+					db.query(
+						"INSERT "+conn.getIgnore()+" INTO byte_buyer_bindings \n\
+						(device_address, out_byteball_address, to_bitcoin_address) VALUES (?,?,?)",
+						[device_address, out_byteball_address, to_bitcoin_address],
+						function(){
+							return onTransactionDone(function() {
+								unlock();
+								handleBitcoinAddress(to_bitcoin_address);
+							});
+						}
+					);
+				});
 			});
 		});
 	});
 }
 
 function assignOrReadDestinationByteballAddress(device_address, out_bitcoin_address, handleByteballAddress){
-	db.query("SELECT to_byteball_address FROM byte_seller_bindings WHERE out_bitcoin_address=?", [out_bitcoin_address], function(rows){
-		if (rows.length > 0) // already know this bitcoin address
-			return handleByteballAddress(rows[0].to_byteball_address);
-		// generate new address
-		mutex.lock(["new_byteball_address"], function(unlock){
-			var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
-			walletDefinedByKeys.issueNextAddress(wallet, 0, function(objAddress){
-				var to_byteball_address = objAddress.address;
-				db.query(
-					"INSERT "+db.getIgnore()+" INTO byte_seller_bindings \n\
-					(device_address, to_byteball_address, out_bitcoin_address) VALUES (?,?,?)", 
-					[device_address, to_byteball_address, out_bitcoin_address],
-					function(){
-						unlock();
-						handleByteballAddress(to_byteball_address);
-					}
-				);
+	// Same reason for a transaction as with the other direction.
+
+	db.executeInTransaction(function(conn, onTransactionDone) {
+		conn.query("SELECT to_byteball_address FROM byte_seller_bindings WHERE out_bitcoin_address=?", [out_bitcoin_address], function(rows){
+			if (rows.length > 0) // already know this bitcoin address
+				return onTransactionDone(function() {
+					handleByteballAddress(rows[0].to_byteball_address);
+				});
+			// generate new address
+			mutex.lock(["new_byteball_address"], function(unlock){
+				var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
+				walletDefinedByKeys.issueNextAddress(wallet, 0, function(objAddress){
+					var to_byteball_address = objAddress.address;
+					conn.query(
+						"INSERT "+conn.getIgnore()+" INTO byte_seller_bindings \n\
+						(device_address, to_byteball_address, out_bitcoin_address) VALUES (?,?,?)",
+						[device_address, to_byteball_address, out_bitcoin_address],
+						function(){
+							return onTransactionDone(function() {
+								unlock();
+								handleByteballAddress(to_byteball_address);
+							});
+						}
+					);
+				});
 			});
 		});
 	});
