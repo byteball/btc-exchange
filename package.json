@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"headless-byteball": "git+https://github.com/byteball/headless-byteball.git",
-		"byteballcore": "^0.2.1",
+		"byteballcore": "git+https://github.com/byteball/byteballcore.git",
 		"bitcore-lib": "^0.13.14",
 		"bitcoin": "^3.0.1"
 	}
