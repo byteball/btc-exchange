@@ -15,7 +15,7 @@ const MAX_GB = 1;
 
 // from customer's perspective, BTC/GB
 const SAFE_BUY_RATE = 0.04;
-const SAFE_SELL_RATE = 0.01;
+const SAFE_SELL_RATE = 0.001;
 
 // from customer's perspective, BTC/GB
 var buy_rate = SAFE_BUY_RATE;  // higher
@@ -181,7 +181,7 @@ function updateInstantRates(){
 			sell_rate = min_price;
 			return notifications.notifyAdmin('not enough buy-side liquidity');
 		}
-		sell_rate = Math.round(price/(1+INSTANT_MARGIN)*10000)/10000;
+		sell_rate = Math.round(price/(1+INSTANT_MARGIN)*100000)/100000;
 	});
 }
 
