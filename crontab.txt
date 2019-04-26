@@ -1,1 +1,1 @@
-*/5 * * * * cd byteball-btc-exchange/node_modules/btc-exchange; node check_daemon.js 1>>~/.config/bitcore/check_daemon.log 2>>~/.config/bitcore/check_daemon.err
+*/5 * * * * cd obyte-btc-exchange/node_modules/btc-exchange; node check_daemon.js 1>>~/.config/bitcore/check_daemon.log 2>>~/.config/bitcore/check_daemon.err

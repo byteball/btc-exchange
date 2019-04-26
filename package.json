@@ -1,12 +1,13 @@
 {
 	"name": "btc-exchange",
 	"description": "Byte-to-BTC exchange",
-	"author": "Byteball",
+	"author": "Obyte",
 	"version": "0.1.8",
 	"main": "index.js",
 	"keywords": [
 		"exchange",
 		"bitcoin",
+		"obyte",
 		"byteball",
 		"chatbot"
 	],
@@ -19,8 +20,8 @@
 		"url": "https://github.com/byteball/btc-exchange/issues"
 	},
 	"dependencies": {
-		"headless-byteball": "git+https://github.com/byteball/headless-byteball.git",
-		"byteballcore": "git+https://github.com/byteball/byteballcore.git",
+		"headless-obyte": "git+https://github.com/byteball/headless-obyte.git",
+		"ocore": "git+https://github.com/byteball/ocore.git",
 		"bitcore-lib": "^0.13.14",
 		"bitcoin": "^3.0.1"
 	}

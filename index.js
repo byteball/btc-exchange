@@ -1,7 +1,7 @@
 /*jslint node: true */
 'use strict';
 var util = require('util');
-var async = require('byteballcore/node_modules/async');
+var async = require('ocore/node_modules/async');
 var bitcore = require('bitcore-lib');
 var Transaction = bitcore.Transaction;
 var EventEmitter = require('events').EventEmitter;
@@ -10,14 +10,14 @@ var notifications = require('./notifications.js');
 var settlement = require('./settlement.js');
 var book = require('./book.js');
 var instant = require('./instant.js');
-var conf = require('byteballcore/conf.js');
-var constants = require('byteballcore/constants.js');
-var db = require('byteballcore/db.js');
-var mutex = require('byteballcore/mutex.js');
-var eventBus = require('byteballcore/event_bus.js');
-var ValidationUtils = require("byteballcore/validation_utils.js");
-var desktopApp = require('byteballcore/desktop_app.js');
-var headlessWallet = require('headless-byteball');
+var conf = require('ocore/conf.js');
+var constants = require('ocore/constants.js');
+var db = require('ocore/db.js');
+var mutex = require('ocore/mutex.js');
+var eventBus = require('ocore/event_bus.js');
+var ValidationUtils = require("ocore/validation_utils.js");
+var desktopApp = require('ocore/desktop_app.js');
+var headlessWallet = require('headless-obyte');
 
 const MIN_CONFIRMATIONS = 2;
 const MIN_SATOSHIS = 100000; // typical fee is 0.0008 BTC = 80000 sat
@@ -89,7 +89,7 @@ function updateCurrentPrice(device_address, order_type, price, onDone){
 function assignOrReadDestinationBitcoinAddress(device_address, out_byteball_address, handleBitcoinAddress){
 	mutex.lock([device_address], function(device_unlock){
 		db.query("SELECT to_bitcoin_address FROM byte_buyer_bindings WHERE out_byteball_address=?", [out_byteball_address], function(rows){
-			if (rows.length > 0){ // already know this byteball address
+			if (rows.length > 0){ // already know this Obyte address
 				device_unlock()
 				return handleBitcoinAddress(rows[0].to_bitcoin_address);
 			}
@@ -124,7 +124,7 @@ function assignOrReadDestinationByteballAddress(device_address, out_bitcoin_addr
 			}
 			// generate new address
 			mutex.lock(["new_byteball_address"], function(unlock){
-				var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
+				var walletDefinedByKeys = require('ocore/wallet_defined_by_keys.js');
 				walletDefinedByKeys.issueNextAddress(wallet, 0, function(objAddress){
 					var to_byteball_address = objAddress.address;
 					db.query(
@@ -239,7 +239,7 @@ function getBtcBalance(count_confirmations, handleBalance, counter){
 }
 
 function checkSolvency(){
-	var Wallet = require('byteballcore/wallet.js');
+	var Wallet = require('ocore/wallet.js');
 	Wallet.readBalance(wallet, function(assocBalances){
 		var byte_balance = assocBalances['base'].stable + assocBalances['base'].pending;
 		getBtcBalance(0, function(btc_balance) {
@@ -276,7 +276,7 @@ eventBus.once('headless_wallet_ready', function(){
 
 
 eventBus.on('new_my_transactions', function(arrUnits){
-	var device = require('byteballcore/device.js');
+	var device = require('ocore/device.js');
 	db.query(
 		"SELECT byte_seller_binding_id, byte_seller_bindings.device_address, unit, amount, sell_price \n\
 		FROM outputs \n\
@@ -354,8 +354,8 @@ function initChat(exchangeService){
 		return;
 	}
 	
-	var bbWallet = require('byteballcore/wallet.js');
-	var device = require('byteballcore/device.js');
+	var bbWallet = require('ocore/wallet.js');
+	var device = require('ocore/device.js');
 	
 	function readCurrentHeight(handleCurrentHeight){
 		exchangeService.node.services.bitcoind.getInfo(function(err, currentInfo){
@@ -520,7 +520,7 @@ function initChat(exchangeService){
 			console.log('state='+state);
 			
 			if (lc_text === 'buy'){
-				device.sendMessageToDevice(from_address, 'text', "Buying at "+instant.getBuyRate()+" BTC/GB.  Please let me know your Byteball address (just click \"...\" button and select \"Insert my address\").");
+				device.sendMessageToDevice(from_address, 'text', "Buying at "+instant.getBuyRate()+" BTC/GB.  Please let me know your Obyte address (just click \"...\" button and select \"Insert my address\").");
 				updateCurrentPrice(from_address, 'buy', null);
 				updateState(from_address, 'waiting_for_byteball_address');
 				return;
@@ -610,7 +610,7 @@ function initChat(exchangeService){
 						updateCurrentPrice(from_address, order_type, price);
 						var response = (order_type === 'buy' ? 'Buying' : 'Selling')+' at '+price+' BTC/GB.';
 						if (!best_price){
-							response += '.\n' + (order_type === 'buy' ? "Please let me know your Byteball address (just click \"...\" button and select \"Insert my address\")." : "Please let me know your Bitcoin address.");
+							response += '.\n' + (order_type === 'buy' ? "Please let me know your Obyte address (just click \"...\" button and select \"Insert my address\")." : "Please let me know your Bitcoin address.");
 							updateState(from_address, (order_type === 'buy') ? 'waiting_for_byteball_address' : 'waiting_for_bitcoin_address');
 						}
 						device.sendMessageToDevice(from_address, 'text', response);

@@ -1,12 +1,12 @@
 /*jslint node: true */
 'use strict';
-var async = require('byteballcore/node_modules/async');
+var async = require('ocore/node_modules/async');
 var notifications = require('./notifications.js');
 var settlement = require('./settlement.js');
 var book = require('./book.js');
-var db = require('byteballcore/db.js');
-var mutex = require('byteballcore/mutex.js');
-var eventBus = require('byteballcore/event_bus.js');
+var db = require('ocore/db.js');
+var mutex = require('ocore/mutex.js');
+var eventBus = require('ocore/event_bus.js');
 
 const INSTANT_MARGIN = 0.02;
 
@@ -37,7 +37,7 @@ function handleInstantSellOrder(conn, byte_seller_deposit_id, byte_amount, devic
 		var total_satoshi = buyer_rows.reduce(function(acc, buyer_order){ return acc + buyer_order.satoshi_amount; }, 0);
 		if (total_satoshi < satoshi_amount){
 			book.insertSellerOrder(conn, byte_seller_deposit_id, byte_amount, device_address, sell_rate, function(){
-				var device = require('byteballcore/device.js');
+				var device = require('ocore/device.js');
 				device.sendMessageToDevice(device_address, 'text', "Your payment is now final but there's not enough liquidity to complete the exchange.  We'll exchange your bytes as soon as possible.");
 			});
 			return onDone();
@@ -90,7 +90,7 @@ function handleInstantBuyOrder(conn, byte_buyer_deposit_id, satoshi_amount, devi
 		var total_bytes = seller_rows.reduce(function(acc, seller_order){ return acc + seller_order.byte_amount; }, 0);
 		if (total_bytes < byte_amount){
 			book.insertBuyerOrder(conn, byte_buyer_deposit_id, satoshi_amount, device_address, buy_rate, function(){
-				var device = require('byteballcore/device.js');
+				var device = require('ocore/device.js');
 				device.sendMessageToDevice(device_address, 'text', "Your payment is now confirmed but there's not enough liquidity to complete the exchange.  We'll exchange your bitcoins as soon as possible.");
 			});
 			return onDone();

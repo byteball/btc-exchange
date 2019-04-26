@@ -1,12 +1,12 @@
 /*jslint node: true */
 'use strict';
 var util = require('util');
-var async = require('byteballcore/node_modules/async');
+var async = require('ocore/node_modules/async');
 var client = require('./bitcoin_client.js');
-var db = require('byteballcore/db.js');
-var mutex = require('byteballcore/mutex.js');
-var eventBus = require('byteballcore/event_bus.js');
-var headlessWallet = require('headless-byteball');
+var db = require('ocore/db.js');
+var mutex = require('ocore/mutex.js');
+var eventBus = require('ocore/event_bus.js');
+var headlessWallet = require('headless-obyte');
 var notifications = require('./notifications.js');
 
 
@@ -64,7 +64,7 @@ function settleInstantBtc(){
 								"UPDATE byte_seller_instant_deals SET execution_date="+db.getNow()+", txid=? WHERE byte_seller_instant_deal_id=?", 
 								[txid, row.byte_seller_instant_deal_id], 
 								function(){
-									var device = require('byteballcore/device.js');
+									var device = require('ocore/device.js');
 									device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.satoshi_amount/1e8)+" BTC.  Exchange complete, thank you for using our services!");
 									cb();
 								}
@@ -116,7 +116,7 @@ function settleBookBtc(){
 								"UPDATE byte_seller_orders SET execution_date="+db.getNow()+", txid=? WHERE byte_seller_order_id=?", 
 								[txid, row.byte_seller_order_id], 
 								function(){
-									var device = require('byteballcore/device.js');
+									var device = require('ocore/device.js');
 									device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.satoshi_amount/1e8)+" BTC.  See in the list of [orders](command:orders) if any of your orders are still pending");
 									cb();
 								}
@@ -156,7 +156,7 @@ function settleInstantBytes(){
 										"UPDATE byte_buyer_instant_deals SET execution_date="+db.getNow()+", unit=? WHERE byte_buyer_instant_deal_id=?", 
 										[unit, row.byte_buyer_instant_deal_id], 
 										function(){
-											var device = require('byteballcore/device.js');
+											var device = require('ocore/device.js');
 											device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.byte_amount/1e9)+" GB.  Exchange complete, thank you for using our services!");
 											cb();
 										}
@@ -195,7 +195,7 @@ function settleBookBytes(){
 									"UPDATE byte_buyer_orders SET execution_date="+db.getNow()+", unit=? WHERE byte_buyer_order_id=?", 
 									[unit, row.byte_buyer_order_id], 
 									function(){
-										var device = require('byteballcore/device.js');
+										var device = require('ocore/device.js');
 										device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.byte_amount/1e9)+" GB.  See in the list of [orders](command:orders) if any of your orders are still pending");
 										cb();
 									}

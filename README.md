@@ -1,16 +1,16 @@
 # BTC exchange
 
-The exchange allows your customers to exchange bitcoins to bytes and bytes to bitcoins.  No registration required, the customer just chats with a chatbot in his [Byteball wallet](../../../byteball).
+The exchange allows your customers to exchange bitcoins to bytes and bytes to bitcoins.  No registration required, the customer just chats with a chatbot in his [Obyte wallet](../../../obyte-gui-wallet).
 
 ## Install
 
 Install [bitcore](https://bitcore.io/guides/full-node/) and create new bitcore node:
 ```
-bitcore create -d ~/.bitcore/data byteball-btc-exchange
+bitcore create -d ~/.bitcore/data obyte-btc-exchange
 ```
-(add `--testnet` to work on testnet).  Here `~/.bitcore/data` is the location of your data directory where full Bitcoin bockchain will be stored, `byteball-btc-exchange` is the name of your node.  `cd` to your node folder:
+(add `--testnet` to work on testnet).  Here `~/.bitcore/data` is the location of your data directory where full Bitcoin bockchain will be stored, `obyte-btc-exchange` is the name of your node.  `cd` to your node folder:
 ```
-cd byteball-btc-exchange
+cd obyte-btc-exchange
 ```
 Install `btc-exchange` service:
 ```
@@ -49,30 +49,30 @@ and execute all SQL from [btc-exchange.sql](btc-exchange.sql), then start the no
 	"deviceName": "Byte-BTC Exchange",
 	"admin_email": "admin@yourdomain.com",
 	"from_email": "btc-exchange-alerts@yourdomain.com",
-	"hub": "byteball.org/bb",
+	"hub": "obyte.org/bb",
 	"bWantNewPeers": false,
 	"socksHost": "127.0.0.1",
 	"socksPort": 9050,
 	"socksLocalDNS": false,
 	"control_addresses": ["DEVICE ADDRESS OF YOUR GUI WALLET"],
-	"payout_address": "YOUR BYTEBALL ADDRESS WHERE IT IS ALLOWED TO WITHDRAW PROFITS TO",
+	"payout_address": "YOUR OBYTE ADDRESS WHERE IT IS ALLOWED TO WITHDRAW PROFITS TO",
 	"permanent_paring_secret": "0000"
 }
 ```
-The socks* settings are recommended to run your node through TOR.  Since you have to store large amounts of customers' bytes and bitcoins online, you don't want potential attackers to know your IP address, and TOR is a good way to hide it (see below).  See the documentation of [headless wallet](../../../headless-byteball) and [core library](../../../byteballcore) to learn about other settings in `conf.json`.
+The socks* settings are recommended to run your node through TOR.  Since you have to store large amounts of customers' bytes and bitcoins online, you don't want potential attackers to know your IP address, and TOR is a good way to hide it (see below).  See the documentation of [headless wallet](../../../headless-obyte) and [core library](../../../ocore) to learn about other settings in `conf.json`.
 
-After editing your `conf.json`, start the node again.  It will take some time to sync with both Byteball and Bitcoin networks.
+After editing your `conf.json`, start the node again.  It will take some time to sync with both Obyte and Bitcoin networks.
 
 Every time your node starts, it prints its pairing code:
 ```
 ====== my device pubkey: A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz
-my pairing code: A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz@byteball.org/bb#0000
+my pairing code: A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz@obyte.org/bb#0000
 ```
 Put this code on your site so that your customers are able to start an exchange by clicking a link:
 ```
-<a href="byteball:A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz@byteball.org/bb#0000">start a chat with the exchange chatbot</a>
+<a href="byteball:A9bg4s0ZI36PcTp4p8sNywZ+DGeFm9dP75TcACI22Byz@obyte.org/bb#0000">start a chat with the exchange chatbot</a>
 ```
-If you open this link in your control device (specified in `control_addresses`), you have access to admin functions, see the documentation for [headless wallet](../../../headless-byteball).  Type `balance` to see the current balances of the exchange:
+If you open this link in your control device (specified in `control_addresses`), you have access to admin functions, see the documentation for [headless wallet](../../../headless-obyte).  Type `balance` to see the current balances of the exchange:
 
 ![Balance of the exchange](btc-exchange-balance.png)
 

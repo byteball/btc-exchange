@@ -2,10 +2,10 @@
 'use strict';
 var notifications = require('./notifications.js');
 var settlement = require('./settlement.js');
-var conf = require('byteballcore/conf.js');
-var db = require('byteballcore/db.js');
-var mutex = require('byteballcore/mutex.js');
-var eventBus = require('byteballcore/event_bus.js');
+var conf = require('ocore/conf.js');
+var db = require('ocore/db.js');
+var mutex = require('ocore/mutex.js');
+var eventBus = require('ocore/event_bus.js');
 
 const FEE = conf.FEE || 0.002;
 
@@ -53,7 +53,7 @@ function insertBuyerOrder(conn, byte_buyer_deposit_id, satoshi_amount, device_ad
 		[byte_buyer_deposit_id, device_address, net_satoshi_amount, price],
 		function(){
 			finishBuyerDeposit(conn, byte_buyer_deposit_id, fee_satoshi_amount, net_satoshi_amount, onDone);
-			var device = require('byteballcore/device.js');
+			var device = require('ocore/device.js');
 			device.sendMessageToDevice(device_address, 'text', "Your order to buy bytes for "+(net_satoshi_amount/1e8)+" BTC at "+price+" BTC/GB was added to the [book](command:book) (fee "+(fee_satoshi_amount/1e8)+" BTC)");
 		}
 	);
@@ -67,7 +67,7 @@ function insertSellerOrder(conn, byte_seller_deposit_id, byte_amount, device_add
 		[byte_seller_deposit_id, device_address, net_byte_amount, price],
 		function(){
 			finishSellerDeposit(conn, byte_seller_deposit_id, fee_byte_amount, net_byte_amount, onDone);
-			var device = require('byteballcore/device.js');
+			var device = require('ocore/device.js');
 			device.sendMessageToDevice(device_address, 'text', "Your order to sell "+(net_byte_amount/1e9)+" GB at "+price+" BTC/GB was added to the [book](command:book) (fee "+(fee_byte_amount/1e9)+" GB)");
 		}
 	);
