@@ -186,7 +186,11 @@ CREATE TABLE byte_seller_order_executions (
 	FOREIGN KEY (byte_seller_order_id) REFERENCES byte_seller_orders(byte_seller_order_id)
 );
 
-
+CREATE TABLE aliases (
+	device_address CHAR(33) NOT NULL PRIMARY KEY,
+	alias  CHAR(33) NOT NULL UNIQUE,
+	FOREIGN KEY (device_address) REFERENCES correspondent_devices(device_address)
+);
 
 
 

@@ -84,3 +84,9 @@ Although your node doesn't have to accept incoming connections, it still has to 
 proxy=127.0.0.1:9050
 ```
 in your `bitcoin.conf`.
+
+## API
+This chatbot has an API allowing allowing users to set orders from an external headless-wallet in order to automatize their trading.
+The GUI wallet is used to set initial orders and transfer byte and/or BTC, then the command `alias device_address` specifies the address of the device that can control the account.
+Alias address at any time with `remove alias`.
+Check (https://github.com/Papabyte/btc-exchange-dealer/blob/master/modules/exchange_bot_api.js) for an example of how to use this API.

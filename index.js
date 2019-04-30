@@ -1,7 +1,7 @@
 /*jslint node: true */
 'use strict';
 var util = require('util');
-var async = require('ocore/node_modules/async');
+var async = require('async');
 var bitcore = require('bitcore-lib');
 var Transaction = bitcore.Transaction;
 var EventEmitter = require('events').EventEmitter;
@@ -18,6 +18,8 @@ var eventBus = require('ocore/event_bus.js');
 var ValidationUtils = require("ocore/validation_utils.js");
 var desktopApp = require('ocore/desktop_app.js');
 var headlessWallet = require('headless-obyte');
+var api = require('./api.js');
+
 
 const MIN_CONFIRMATIONS = 2;
 const MIN_SATOSHIS = 100000; // typical fee is 0.0008 BTC = 80000 sat
@@ -67,24 +69,7 @@ function readCurrentPrices(device_address, handlePrices){
 	});
 }
 
-function updateCurrentPrice(device_address, order_type, price, onDone){
-	if (!onDone)
-		onDone = function(){};
-	db.query("INSERT "+db.getIgnore()+" INTO current_prices (device_address) VALUES (?)", [device_address], function(){
-		db.query("UPDATE current_prices SET "+order_type+"_price=? WHERE device_address=?", [price, device_address], function(){
-			if (!price)
-				return onDone();
-			db.query(
-				"UPDATE byte_"+order_type+"er_orders SET price=?, last_update="+db.getNow()+" WHERE device_address=? AND is_active=1", 
-				[price, device_address], 
-				function(){
-					onDone();
-					book.matchUnderLock();
-				}
-			);
-		});
-	});
-}
+
 
 function assignOrReadDestinationBitcoinAddress(device_address, out_byteball_address, handleBitcoinAddress){
 	mutex.lock([device_address], function(device_unlock){
@@ -521,13 +506,13 @@ function initChat(exchangeService){
 			
 			if (lc_text === 'buy'){
 				device.sendMessageToDevice(from_address, 'text', "Buying at "+instant.getBuyRate()+" BTC/GB.  Please let me know your Obyte address (just click \"...\" button and select \"Insert my address\").");
-				updateCurrentPrice(from_address, 'buy', null);
+				book.updateCurrentPrice(from_address, 'buy', null);
 				updateState(from_address, 'waiting_for_byteball_address');
 				return;
 			}
 			if (lc_text === 'sell'){
 				device.sendMessageToDevice(from_address, 'text', "Selling at "+instant.getSellRate()+" BTC/GB.  Please let me know your Bitcoin address.");
-				updateCurrentPrice(from_address, 'sell', null);
+				book.updateCurrentPrice(from_address, 'sell', null);
 				updateState(from_address, 'waiting_for_bitcoin_address');
 				return;
 			}
@@ -565,20 +550,8 @@ function initChat(exchangeService){
 				return;
 			}
 			if (lc_text === 'orders' || lc_text === 'book'){
-				var and_device = (lc_text === 'book') ? '' : ' AND device_address=? ';
-				var params = [];
-				if (lc_text === 'orders')
-					params.push(from_address, from_address);
-				db.query(
-					"SELECT price, 'sell' AS order_type, SUM(byte_amount)/1e9 AS total \n\
-					FROM byte_seller_orders WHERE is_active=1 "+and_device+" \n\
-					GROUP BY price \n\
-					UNION ALL \n\
-					SELECT price, 'buy' AS order_type, ROUND(SUM(satoshi_amount)/1e8/price, 9) AS total \n\
-					FROM byte_buyer_orders WHERE is_active=1 "+and_device+" \n\
-					GROUP BY price \n\
-					ORDER BY price DESC",
-					params,
+
+				book.getOrders(lc_text === 'orders' ? from_address : null,
 					function(rows){
 						var arrLines = rows.map(row => "At "+row.price+" BTC/GB "+row.order_type+" vol. "+row.total+" GB");
 						if (lc_text === 'book'){
@@ -607,18 +580,38 @@ function initChat(exchangeService){
 							if (order_type === 'sell' && price > best_price)
 								return device.sendMessageToDevice(from_address, 'text', "Sell price of existing orders can only be decreased");
 						}*/
-						updateCurrentPrice(from_address, order_type, price);
-						var response = (order_type === 'buy' ? 'Buying' : 'Selling')+' at '+price+' BTC/GB.';
-						if (!best_price){
-							response += '.\n' + (order_type === 'buy' ? "Please let me know your Obyte address (just click \"...\" button and select \"Insert my address\")." : "Please let me know your Bitcoin address.");
-							updateState(from_address, (order_type === 'buy') ? 'waiting_for_byteball_address' : 'waiting_for_bitcoin_address');
-						}
-						device.sendMessageToDevice(from_address, 'text', response);
+						book.updateCurrentPrice(from_address, order_type, price, function(){
+							var response = (order_type === 'buy' ? 'Buying' : 'Selling')+' at '+price+' BTC/GB.';
+							if (!best_price){
+								response += '.\n' + (order_type === 'buy' ? "Please let me know your Obyte address (just click \"...\" button and select \"Insert my address\")." : "Please let me know your Bitcoin address.");
+								updateState(from_address, (order_type === 'buy') ? 'waiting_for_byteball_address' : 'waiting_for_bitcoin_address');
+							}
+							device.sendMessageToDevice(from_address, 'text', response);
+						});
 					});
 					bSetNewPrice = true;
 				}
 			}
-			
+
+			if (lc_text.indexOf("alias") === 0 && lc_text.split(" ").length === 2){
+				var alias_address = lc_text.split(" ")[1].toUpperCase();
+				if (ValidationUtils.isValidDeviceAddress(alias_address)){
+					api.setAlias(from_address, alias_address, function(){
+						device.sendMessageToDevice(from_address, 'text', "Your new alias device address for API is: " + alias_address);
+					})
+				} else {
+					device.sendMessageToDevice(from_address, 'text',alias_address +  " is not a valid device address.");
+				}
+				return;
+			}
+
+			if (lc_text === "remove alias"){
+				api.removeAlias(from_address, function(){
+					device.sendMessageToDevice(from_address, 'text', "Alias address has been removed.");
+				});
+				return;
+			}
+
 			var arrMatches = text.match(/\b([A-Z2-7]{32})\b/);
 			var bValidByteballAddress = (arrMatches && ValidationUtils.isValidAddress(arrMatches[1]));
 			if (bValidByteballAddress){ // new BB address: create or update binding

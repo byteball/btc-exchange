@@ -7,8 +7,8 @@
 	"keywords": [
 		"exchange",
 		"bitcoin",
-		"obyte",
 		"byteball",
+		"obyte",
 		"chatbot"
 	],
 	"license": "MIT",
@@ -20,9 +20,10 @@
 		"url": "https://github.com/byteball/btc-exchange/issues"
 	},
 	"dependencies": {
-		"headless-obyte": "git+https://github.com/byteball/headless-obyte.git",
-		"ocore": "git+https://github.com/byteball/ocore.git",
+		"async": "^2.6.1",
+		"bitcoin": "^3.0.1",
 		"bitcore-lib": "^0.13.14",
-		"bitcoin": "^3.0.1"
+		"headless-obyte": "git+https://github.com/byteball/headless-obyte.git",
+		"ocore": "git+https://github.com/byteball/ocore.git"
 	}
 }

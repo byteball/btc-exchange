@@ -1,13 +1,14 @@
 /*jslint node: true */
 'use strict';
 var util = require('util');
-var async = require('ocore/node_modules/async');
+var async = require('async');
 var client = require('./bitcoin_client.js');
 var db = require('ocore/db.js');
 var mutex = require('ocore/mutex.js');
 var eventBus = require('ocore/event_bus.js');
 var headlessWallet = require('headless-obyte');
 var notifications = require('./notifications.js');
+var api = require('./api.js');
 
 
 
@@ -66,6 +67,7 @@ function settleInstantBtc(){
 								function(){
 									var device = require('ocore/device.js');
 									device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.satoshi_amount/1e8)+" BTC.  Exchange complete, thank you for using our services!");
+									api.notifyPayment(row.device_address, "BTC", row.satoshi_amount/1e8, txid);
 									cb();
 								}
 							);
@@ -118,6 +120,7 @@ function settleBookBtc(){
 								function(){
 									var device = require('ocore/device.js');
 									device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.satoshi_amount/1e8)+" BTC.  See in the list of [orders](command:orders) if any of your orders are still pending");
+									api.notifyPayment(row.device_address, "BTC", row.satoshi_amount/1e8, txid);
 									cb();
 								}
 							);
@@ -158,6 +161,7 @@ function settleInstantBytes(){
 										function(){
 											var device = require('ocore/device.js');
 											device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.byte_amount/1e9)+" GB.  Exchange complete, thank you for using our services!");
+											api.notifyPayment(row.device_address, "GB", row.byte_amount/1e9, unit);
 											cb();
 										}
 									);
@@ -197,6 +201,7 @@ function settleBookBytes(){
 									function(){
 										var device = require('ocore/device.js');
 										device.sendMessageToDevice(row.device_address, 'text', "Sent "+(row.byte_amount/1e9)+" GB.  See in the list of [orders](command:orders) if any of your orders are still pending");
+										api.notifyPayment(row.device_address, "GB", row.byte_amount/1e9, unit);
 										cb();
 									}
 								);
