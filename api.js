@@ -10,18 +10,6 @@ const rateLimitationWindowPeriodInSec = 30;
 const maxHitsPerPeriod = 6;
 const noWarningThreshold = 2;
 
-const assocErrors = {
-	0: "too many requests",
-	1: "you're not an alias",
-	2: "object has a key not allowed",
-	3: "command should be a string",
-	4: "price should be a number",
-	5: "tag should be a string",
-	6: "time_limit should be an integer",
-	7: "no price set for buy or sell command",
-	8: "time limit expired"
-}
-
 var assocHitsByAddress = {};
 
 setInterval(function(){
@@ -41,17 +29,17 @@ eventBus.on('object', function(from_alias_address, receivedObject){
 	//send a warning when hits rate is just over the limit
 	var device = require('ocore/device.js');
 	if (assocHitsByAddress[from_alias_address] > maxHitsPerPeriod)
-		return device.sendMessageToDevice(from_alias_address, 'object', {error_code: 0, error: assocErrors[0]});
+		return device.sendMessageToDevice(from_alias_address, 'object', {error_code: 0, error: "too many requests"});
 
-	var error_code = isReceivedObjectInvalid(receivedObject);
-	if (error_code)
-		return  device.sendMessageToDevice(from_alias_address, 'object', {error_code: error_code, error: assocErrors[error_code]});
+	var error = isReceivedObjectInvalid(receivedObject);
+	if (error)
+		return  device.sendMessageToDevice(from_alias_address, 'object', error);
 
 	db.query("SELECT device_address FROM aliases WHERE alias=?",[from_alias_address], function(rows){
 		if (rows[0])
 			treatReceivedObject(from_alias_address, rows[0].device_address, receivedObject);
 		else
-			return device.sendMessageToDevice(from_alias_address, 'object', {error_code: 1, error: assocErrors[1]});
+			return device.sendMessageToDevice(from_alias_address, 'object', {error_code: 1, error: "you're not an alias"});
 	});
 
 });
@@ -60,22 +48,22 @@ eventBus.on('object', function(from_alias_address, receivedObject){
 function isReceivedObjectInvalid(receivedObject){
 
 	if (validationUtils.hasFieldsExcept(receivedObject,["command", "price", "tag", "time_limit"]))
-		return 2;
+		return {error_code: 2, error: "object has a key not allowed"};
 
 	if (!validationUtils.isNonemptyString(receivedObject.command))
-		return 3;
+		return {error_code: 3, error: "command should be a string"};
 
 	if (receivedObject.price && typeof receivedObject.price != "number" && receivedObject.price > 0)
-		return 4;
+		return {error_code: 4, error: "price should be a number"};
 	
 	if (!validationUtils.isNonemptyString(receivedObject.tag))
-		return 5;
+		return {error_code: 5, error: "tag should be a string"};
 
 	if (!validationUtils.isPositiveInteger(receivedObject.time_limit))
-		return 6;
+		return {error_code: 6, error: "time_limit should be an integer"};
 
 	if (receivedObject.time_limit < new Date() / 1000)
-		return 8;
+		return {error_code: 8, error: "time limit expired"};
 
 	return false;
 
@@ -87,7 +75,7 @@ function treatReceivedObject(from_alias_address, from_address, receivedObject){
 
 	if (receivedObject.command === "buy" || receivedObject.command === "sell") {
 		if (!receivedObject.price)
-			return device.sendMessageToDevice(from_alias_address, 'object', {error_code: 7, error: assocErrors[7]});
+			return device.sendMessageToDevice(from_alias_address, 'object', {error_code: 7, error: "no price set for buy or sell command"});
 		book.updateCurrentPrice(from_address, receivedObject.command, receivedObject.price.toFixed(9), function(){
 			return device.sendMessageToDevice(from_alias_address, 'object', {response: "accepted", tag: receivedObject.tag});
 		})
