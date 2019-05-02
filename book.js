@@ -224,6 +224,50 @@ function matchUnderLock(){
 	});
 }
 
+
+function getOrders(device_address, handle){
+	var and_device = "";
+	var params = [];
+	if (device_address){
+		and_device = " AND device_address=? ";
+		params.push(device_address, device_address);
+	}
+
+	db.query(
+		"SELECT price, 'sell' AS order_type, SUM(byte_amount)/1e9 AS total \n\
+		FROM byte_seller_orders WHERE is_active=1 "+and_device+" \n\
+		GROUP BY price \n\
+		UNION ALL \n\
+		SELECT price, 'buy' AS order_type, ROUND(SUM(satoshi_amount)/1e8/price, 9) AS total \n\
+		FROM byte_buyer_orders WHERE is_active=1 "+and_device+" \n\
+		GROUP BY price \n\
+		ORDER BY price DESC",
+		params, function(rows){
+			return handle(rows);
+		});
+
+}
+
+function updateCurrentPrice(device_address, order_type, price, onDone){
+	if (!onDone)
+		onDone = function(){};
+	db.query("INSERT "+db.getIgnore()+" INTO current_prices (device_address) VALUES (?)", [device_address], function(){
+		db.query("UPDATE current_prices SET "+order_type+"_price=? WHERE device_address=?", [price, device_address], function(){
+			if (!price)
+				return onDone();
+			db.query(
+				"UPDATE byte_"+order_type+"er_orders SET price=?, last_update="+db.getNow()+" WHERE device_address=? AND is_active=1", 
+				[price, device_address], 
+				function(){
+					onDone();
+					matchUnderLock();
+				}
+			);
+		});
+	});
+}
+
+
 exports.FEE_PERCENT = FEE*100;
 exports.satoshis2bytes = satoshis2bytes;
 exports.bytes2satoshis = bytes2satoshis;
@@ -236,4 +280,5 @@ exports.markSellerOrderMatched = markSellerOrderMatched;
 exports.insertRemainderBuyerOrder = insertRemainderBuyerOrder;
 exports.insertRemainderSellerOrder = insertRemainderSellerOrder;
 exports.matchUnderLock = matchUnderLock;
-
+exports.getOrders = getOrders;
+exports.updateCurrentPrice = updateCurrentPrice;

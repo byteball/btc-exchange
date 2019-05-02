@@ -1,6 +1,6 @@
 /*jslint node: true */
 'use strict';
-var async = require('ocore/node_modules/async');
+var async = require('async');
 var notifications = require('./notifications.js');
 var settlement = require('./settlement.js');
 var book = require('./book.js');
