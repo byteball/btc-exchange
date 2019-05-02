@@ -113,7 +113,14 @@ function notifyPayment(device_address, type, amount, txid){
 }
 
 function setAlias(from_address, alias_address, handle){
-	db.query("REPLACE INTO aliases (device_address,alias) VALUES (?,?)", [from_address,alias_address], handle);
+	db.query("SELECT 1 FROM aliases WHERE alias=? AND device_address!=?", [alias_address, from_address], function(rows){
+		if (rows[0])
+			return handle(alias_address + " is already used as alias");
+		else
+			db.query("REPLACE INTO aliases (device_address,alias) VALUES (?,?)", [from_address,alias_address], function(){
+				return handle();	
+			});
+	});
 }
 
 function removeAlias(from_address, handle){

@@ -596,9 +596,11 @@ function initChat(exchangeService){
 			if (lc_text.indexOf("alias") === 0 && lc_text.split(" ").length === 2){
 				var alias_address = lc_text.split(" ")[1].toUpperCase();
 				if (ValidationUtils.isValidDeviceAddress(alias_address)){
-					api.setAlias(from_address, alias_address, function(){
+					api.setAlias(from_address, alias_address, function(err){
+						if (err)
+							return device.sendMessageToDevice(from_address, 'text', err);
 						device.sendMessageToDevice(from_address, 'text', "Your new alias device address for API is: " + alias_address);
-					})
+					});
 				} else {
 					device.sendMessageToDevice(from_address, 'text',alias_address +  " is not a valid device address.");
 				}
