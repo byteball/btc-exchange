@@ -22,8 +22,8 @@ var api = require('./api.js');
 
 
 const MIN_CONFIRMATIONS = 2;
-const MIN_SATOSHIS = 100000; // typical fee is 0.0008 BTC = 80000 sat
-const MIN_BYTES = 1e8;
+const MIN_SATOSHIS = 200000; // typical fee is 0.0008 BTC = 80000 sat
+const MIN_BYTES = 3e8;
 
 var bTestnet = constants.version.match(/t$/);
 var wallet;
