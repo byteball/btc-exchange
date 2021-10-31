@@ -3,7 +3,6 @@
 var util = require('util');
 var async = require('async');
 var bitcore = require('bitcore-lib');
-var Transaction = bitcore.Transaction;
 var EventEmitter = require('events').EventEmitter;
 var client = require('./bitcoin_client.js');
 var notifications = require('./notifications.js');
@@ -28,6 +27,12 @@ const MIN_BYTES = 3e8;
 var bTestnet = constants.version.match(/t$/);
 var wallet;
 var bitcoinNetwork = bTestnet ? bitcore.Networks.testnet : bitcore.Networks.livenet;
+
+
+process.on('unhandledRejection', async up => {
+	console.log('unhandledRejection event', up);
+	process.exit(1);
+});
 
 
 function readCurrentState(device_address, handleState){
@@ -79,22 +84,19 @@ function assignOrReadDestinationBitcoinAddress(device_address, out_byteball_addr
 				return handleBitcoinAddress(rows[0].to_bitcoin_address);
 			}
 			// generate new address
-			mutex.lock(["new_bitcoin_address"], function(unlock){
-				client.getNewAddress(function(err, to_bitcoin_address, resHeaders) {
-					if (err)
-						throw Error(err);
-					console.log('BTC Address:', to_bitcoin_address);
-					db.query(
-						"INSERT "+db.getIgnore()+" INTO byte_buyer_bindings \n\
-						(device_address, out_byteball_address, to_bitcoin_address) VALUES (?,?,?)", 
-						[device_address, out_byteball_address, to_bitcoin_address],
-						function(){
-							unlock();
-							device_unlock();
-							handleBitcoinAddress(to_bitcoin_address);
-						}
-					);
-				});
+			mutex.lock(["new_bitcoin_address"], async function(unlock){
+				const to_bitcoin_address = await client.getNewAddress();
+				console.log('BTC Address:', to_bitcoin_address);
+				db.query(
+					"INSERT "+db.getIgnore()+" INTO byte_buyer_bindings \n\
+					(device_address, out_byteball_address, to_bitcoin_address) VALUES (?,?,?)", 
+					[device_address, out_byteball_address, to_bitcoin_address],
+					function(){
+						unlock();
+						device_unlock();
+						handleBitcoinAddress(to_bitcoin_address);
+					}
+				);
 			});
 		});
 	});
@@ -168,7 +170,7 @@ function exchangeBytesToBtc(byte_seller_deposit_id, onDone){
 
 function exchangeBtcToBytes(byte_buyer_deposit_id, onDone){
 	if (!onDone)
-		onDone = function(){};
+		return new Promise(resolve => exchangeBtcToBytes(byte_buyer_deposit_id, resolve));
 	db.query(
 		"SELECT satoshi_amount, out_byteball_address, byte_buyer_bindings.device_address, confirmation_date, buy_price \n\
 		FROM byte_buyer_deposits JOIN byte_buyer_bindings USING(byte_buyer_binding_id) LEFT JOIN current_prices USING(device_address) \n\
@@ -200,41 +202,22 @@ function exchangeBtcToBytes(byte_buyer_deposit_id, onDone){
 	);
 }
 
-function exchangeBtcToBytesUnderLock(byte_buyer_deposit_id){
-	mutex.lock(['btc2bytes'], function(unlock){
-		exchangeBtcToBytes(byte_buyer_deposit_id, unlock);
-	});
-}
 
-function getBtcBalance(count_confirmations, handleBalance, counter){
-	client.getBalance('*', count_confirmations, function(err, btc_balance, resHeaders) {
-		if (err){
-			// retry up to 3 times
-			if (counter >= 3)
-				throw Error("getBalance "+count_confirmations+" failed: "+err);
-			counter = counter || 0;
-			console.log('getBalance attempt #'+counter+' failed: '+err);
-			setTimeout( () => {
-				getBtcBalance(count_confirmations, handleBalance, counter + 1);
-			}, 60*1000);
-			return;
-		}
-		handleBalance(btc_balance);
-	});
+async function getBtcBalance(count_confirmations){
+	return await client.getBalance('*', count_confirmations);
 }
 
 function checkSolvency(){
 	var Wallet = require('ocore/wallet.js');
-	Wallet.readBalance(wallet, function(assocBalances){
-		var byte_balance = assocBalances['base'].stable + assocBalances['base'].pending;
-		getBtcBalance(0, function(btc_balance) {
-			db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function(rows){
-				var owed_satoshis = rows[0].owed_satoshis || 0;
-				db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
-					var owed_bytes = rows[0].owed_bytes || 0;
-					if (owed_satoshis > btc_balance*1e8 || owed_bytes > byte_balance)
-						notifications.notifyAdmin("Solvency check failed:\n"+btc_balance+' BTC\n'+(owed_satoshis/1e8)+' BTC owed\n'+byte_balance+' bytes\n'+owed_bytes+' bytes owed');
-				});
+	Wallet.readBalance(wallet, async function(assocBalances){
+		var byte_balance = assocBalances['base'].total;
+		const btc_balance = await getBtcBalance(0);
+		db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function(rows){
+			var owed_satoshis = rows[0].owed_satoshis || 0;
+			db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
+				var owed_bytes = rows[0].owed_bytes || 0;
+				if (owed_satoshis > btc_balance*1e8 || owed_bytes > byte_balance)
+					notifications.notifyAdmin("Solvency check failed:\n"+btc_balance+' BTC\n'+(owed_satoshis/1e8)+' BTC owed\n'+byte_balance+' bytes\n'+owed_bytes+' bytes owed');
 			});
 		});
 	});
@@ -255,6 +238,7 @@ eventBus.once('headless_wallet_ready', function(){
 	headlessWallet.readSingleWallet(function(_wallet){
 		wallet = _wallet;
 		bHeadlessWalletReady = true;
+		initChat();
 	});
 });
 
@@ -328,117 +312,69 @@ eventBus.on('mci_became_stable', function(mci){
 });
 
 
-function initChat(exchangeService){
-	
-	// wait and repeat
-	if (!bHeadlessWalletReady){
-		eventBus.once('headless_wallet_ready', function(){
-			bHeadlessWalletReady = true;
-			initChat(exchangeService);
-		});
-		return;
-	}
+function initChat(){
 	
 	var bbWallet = require('ocore/wallet.js');
 	var device = require('ocore/device.js');
 	
-	function readCurrentHeight(handleCurrentHeight){
-		exchangeService.node.services.bitcoind.getInfo(function(err, currentInfo){
-			if (err)
-				throw Error("getInfo failed: "+err);
-			handleCurrentHeight(currentInfo.blocks);
-		});
+	async function readCurrentHeight() {
+		const info = await client.getInfo();
+		return info.blocks;
 	}
-	
-	function refreshCountConfirmations(txid, old_count_confirmations, handleNewCountConfirmations){
-		exchangeService.node.services.bitcoind.getDetailedTransaction(txid, function(err, info) {
-			if (err){
-				console.log("refreshCountConfirmations: getDetailedTransaction "+txid+" failed: "+err);
-				return handleNewCountConfirmations();
+
+	async function getLastBlock() {
+		const [row] = await db.query("SELECT last_block FROM last_blocks");
+		if (!row)
+			throw Error(`no last block`);
+		return row.last_block;
+	}
+
+	async function rescanRecentTransactions() {
+		const unlock = await mutex.lockOrSkip('btc2bytes');
+		if (!unlock)
+			return;
+		const last_block = await getLastBlock();
+		const res = await client.listSinceBlock(last_block, 3);
+		const { transactions, lastblock } = res;
+
+		for (let transaction of transactions) {
+			const { category, confirmations, txid, address, amount } = transaction;
+			if (category !== 'receive') {
+				console.log(`skipping a ${category} tx ${txid} on ${address}`);
+				continue;
 			}
-			console.log('getDetailedTransaction: ', info);
-			var bUnconfirmed = (!info.height || info.height === -1);
-			if (bUnconfirmed && old_count_confirmations === 0) // still in mempool
-				return handleNewCountConfirmations();
-			readCurrentHeight(function(currentHeight){
-				var count_confirmations = bUnconfirmed ? 0 : (currentHeight - info.height + 1);
-				if (count_confirmations === old_count_confirmations) // same as before
-					return handleNewCountConfirmations();
-				// we also update if count_confirmations decreased due to reorg (block orphaned and the tx thrown back into mempool)
-				db.query(
-					"UPDATE byte_buyer_deposits SET count_confirmations=? WHERE txid=?", [count_confirmations, txid], 
-					function(){
-						handleNewCountConfirmations(count_confirmations);
-					}
-				);
-			});
-		});
-	}
-	
-	function updateConfirmationCountOfRecentTransactionsAndExchange(min_confirmations, onDone){
-		mutex.lock(['btc2bytes'], function(unlock){
-			db.query(
-				"SELECT txid, count_confirmations, GROUP_CONCAT(byte_buyer_deposit_id) AS deposits \n\
-				FROM byte_buyer_deposits WHERE confirmation_date IS NULL GROUP BY txid", 
-				function(rows){
-					async.eachSeries(
-						rows,
-						function(row, cb){
-							refreshCountConfirmations(row.txid, row.count_confirmations, function(count_confirmations){
-								if (!count_confirmations)
-									count_confirmations = row.count_confirmations;
-								if (count_confirmations < min_confirmations)
-									return cb();
-								var arrDepositIds = row.deposits.split(',');
-								async.eachSeries(
-									arrDepositIds,
-									function(byte_buyer_deposit_id, cb2){
-										exchangeBtcToBytes(byte_buyer_deposit_id, cb2);
-									},
-									cb
-								);
-							});
-						},
-						function(){
-							unlock();
-							if (onDone)
-								onDone();
-						}
-					);
+			if (confirmations < 0) {
+				console.log(`skipping tx ${txid} with ${confirmations} confirmations`);
+				continue;
+			}
+			const rows = await db.query("SELECT count_confirmations, byte_buyer_deposit_id, confirmation_date FROM byte_buyer_deposits WHERE txid=?", [txid]);
+			if (rows.length === 0) { // a new one
+				await handleNewTransaction(txid, confirmations, address, amount);
+			}
+			else { // update an existing one
+				const [{ count_confirmations }] = rows;
+				if (count_confirmations === confirmations) {
+					console.log(`still ${confirmations} confirmations of tx ${txid} on ${address}`);
+					continue;
 				}
-			);
-		});
-	}
-	
-		
-	
-	
-	function rescanForLostTransactions(){
-		db.query(
-			"SELECT byte_buyer_bindings.* \n\
-			FROM byte_buyer_bindings \n\
-			LEFT JOIN byte_buyer_deposits USING(byte_buyer_binding_id) \n\
-			WHERE byte_buyer_deposits.byte_buyer_binding_id IS NULL",
-			function(rows){
-				if (rows.length === 0)
-					return;
-				var arrToBitcoinAddresses = rows.map(function(row){ return row.to_bitcoin_address; });
-				console.log('waiting to BTC addresses: '+arrToBitcoinAddresses.length);
-				exchangeService.node.services.bitcoind.getAddressHistory(arrToBitcoinAddresses, {}, function(err, history){
-					if (err)
-						throw Error('rescan getAddressHistory failed: '+err);
-					console.log('lost transactions: '+history.items.length, history);
-					history.items.forEach(function(item){
-						var arrAddresses = Object.keys(item.addresses);
-						if (arrAddresses.length > 1)
-							throw Error('more than 1 to-address');
-						var to_bitcoin_address = arrAddresses[0];
-						var txid = item.tx.hash;
-						handleNewTransaction(txid, to_bitcoin_address);
-					});
-				});
+				console.log(`tx ${txid} on ${address} now has ${confirmations} confirmations`);
+				await db.query("UPDATE byte_buyer_deposits SET count_confirmations=? WHERE txid=?", [confirmations, txid]);
+				if (confirmations < MIN_CONFIRMATIONS) {
+					console.log(`tx ${txid} on ${address}: not enough confirmations yet`);
+					continue;
+				}
+				for (let { byte_buyer_deposit_id, confirmation_date } of rows) {
+					if (confirmation_date)
+						console.log(`tx ${txid} on ${address}: deposit ${byte_buyer_deposit_id} already confirmed`);
+					else
+						await exchangeBtcToBytes(byte_buyer_deposit_id);
+				}
 			}
-		);
+		}
+
+		if (lastblock !== last_block)
+			await db.query("UPDATE last_blocks SET last_block=?", [lastblock]);
+		unlock();
 	}
 	
 	
@@ -448,25 +384,6 @@ function initChat(exchangeService){
 	/////////////////////////////////
 	// start
 	
-	rescanForLostTransactions();
-	
-	
-	// subscribe to bitcoin addresses where we expect payment
-	db.query(
-		"SELECT to_bitcoin_address FROM byte_buyer_bindings", // user can pay more than once
-		function(rows){
-			if (rows.length === 0)
-				return;
-			var arrToBitcoinAddresses = rows.map(function(row){ return row.to_bitcoin_address; });
-			exchangeService.bus.subscribe('bitcoind/addresstxid', arrToBitcoinAddresses);
-			console.log("subscribed to:", arrToBitcoinAddresses);
-		}
-	);
-	
-	// update confirmations count of recent transactions
-	setTimeout(function(){
-		updateConfirmationCountOfRecentTransactionsAndExchange(MIN_CONFIRMATIONS);
-	}, 20000);
 	setInterval(checkSolvency, 10000);
 
 	eventBus.on('paired', function(from_address){
@@ -478,27 +395,27 @@ function initChat(exchangeService){
 		});
 	});
 
-	eventBus.on('text', function(from_address, text){
+	eventBus.on('text', async function(from_address, text){
 		text = text.trim();
 		var lc_text = text.toLowerCase();
 		
 		if (headlessWallet.isControlAddress(from_address)){
-			if (lc_text === 'balance')
-				return getBtcBalance(0, function(balance) {
-					return getBtcBalance(1, function(confirmed_balance) {
-						var unconfirmed_balance = balance - confirmed_balance;
-						var btc_balance_str = balance+' BTC';
-						if (unconfirmed_balance)
-							btc_balance_str += ' ('+unconfirmed_balance+' unconfirmed)';
-						db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function(rows){
-							var owed_satoshis = rows[0].owed_satoshis || 0;
-							db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function(rows){
-								var owed_bytes = rows[0].owed_bytes || 0;
-								device.sendMessageToDevice(from_address, 'text', btc_balance_str+'\n'+(owed_satoshis/1e8)+' BTC owed\n'+owed_bytes+' bytes owed');
-							});
-						});
+			if (lc_text === 'balance') {
+				const balance = await getBtcBalance(0);
+				const confirmed_balance = await getBtcBalance(1);
+				var unconfirmed_balance = balance - confirmed_balance;
+				var btc_balance_str = balance + ' BTC';
+				if (unconfirmed_balance)
+					btc_balance_str += ' (' + unconfirmed_balance + ' unconfirmed)';
+				db.query("SELECT SUM(satoshi_amount) AS owed_satoshis FROM byte_buyer_orders WHERE is_active=1", function (rows) {
+					var owed_satoshis = rows[0].owed_satoshis || 0;
+					db.query("SELECT SUM(byte_amount) AS owed_bytes FROM byte_seller_orders WHERE is_active=1", function (rows) {
+						var owed_bytes = rows[0].owed_bytes || 0;
+						device.sendMessageToDevice(from_address, 'text', btc_balance_str + '\n' + (owed_satoshis / 1e8) + ' BTC owed\n' + owed_bytes + ' bytes owed');
 					});
 				});
+				return;
+			}
 		}
 		
 		readCurrentState(from_address, function(state){
@@ -627,7 +544,6 @@ function initChat(exchangeService){
 						device.sendMessageToDevice(from_address, 'text', "Got it, you'll receive your bytes to "+out_byteball_address+".  Now please pay BTC to "+to_bitcoin_address+".  We'll exchange as much as you pay, but the "+maximum_text+" minimum is "+(MIN_SATOSHIS/1e8)+" BTC (if you send less, it'll be considered a donation).  "+will_do_text);
 					});
 					updateState(from_address, 'waiting_for_payment');
-					exchangeService.bus.subscribe('bitcoind/addresstxid', [to_bitcoin_address]);
 				});
 				return;
 			}
@@ -679,109 +595,44 @@ function initChat(exchangeService){
 	});
 	
 	
-	function handleNewTransaction(txid, to_bitcoin_address){
-		exchangeService.node.services.bitcoind.getDetailedTransaction(txid, function(err, tx) {
-			if (err)
-				throw Error("getDetailedTransaction failed: "+err);
-			var height = (tx.height === -1) ? null : tx.height;
-			readCurrentHeight(function(currentHeight){
-				var count_confirmations = height ? (currentHeight - height + 1) : 0;
-				console.log("tx:", JSON.stringify(tx));
-				console.log('tx inspect: '+require('util').inspect(tx, {depth:null}));
-				if (txid !== tx.hash)
-					throw Error(txid+"!=="+tx.hash);
-				var received_satoshis = 0;
-				for (var i = 0; i < tx.outputs.length; i++) {
-					var output_bitcoin_address = tx.outputs[i].address;
-					var satoshis = tx.outputs[i].satoshis;
-					console.log("output address:", output_bitcoin_address);
-					if (output_bitcoin_address === to_bitcoin_address)
-						received_satoshis += satoshis;
-				}
-				// we also receive this event when the subscribed address is among inputs
-				if (received_satoshis === 0)
-					return console.log("to address "+to_bitcoin_address+" not found among outputs");
-				//	throw Error("to address not found among outputs");
-				db.query(
-					"SELECT byte_buyer_bindings.device_address, byte_buyer_binding_id, buy_price \n\
-					FROM byte_buyer_bindings LEFT JOIN current_prices USING(device_address) \n\
-					WHERE to_bitcoin_address=?",
-					[to_bitcoin_address],
-					function(rows){
-						if (rows.length === 0)
-							return console.log("unexpected payment");
-						if (rows.length > 1)
-							throw Error("more than 1 row per to btc address");
-						var row = rows[0];
-						if (received_satoshis < MIN_SATOSHIS){ // would burn our profit into BTC fees
-							db.query(
-								"INSERT "+db.getIgnore()+" INTO byte_buyer_deposits \n\
-								(byte_buyer_binding_id, txid, satoshi_amount, fee_satoshi_amount, net_satoshi_amount, confirmation_date) \n\
-								VALUES (?,?, ?,?,0, "+db.getNow()+")", 
-								[row.byte_buyer_binding_id, txid, received_satoshis, received_satoshis]
-							);
-							return device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(received_satoshis/1e8)+" BTC but it is too small, it is considered a donation and will not be exchanged.");
-						}
-						db.query(
-							"INSERT "+db.getIgnore()+" INTO byte_buyer_deposits \n\
-							(byte_buyer_binding_id, txid, satoshi_amount, count_confirmations) VALUES(?,?,?,?)", 
-							[row.byte_buyer_binding_id, txid, received_satoshis, count_confirmations], 
-							function(res){
-								console.log('byte_buyer_deposits res: '+JSON.stringify(res));
-								if (!res.affectedRows)
-									return console.log("duplicate transaction");
-								if (count_confirmations >= MIN_CONFIRMATIONS)
-									return exchangeBtcToBytesUnderLock(res.insertId);
-								var do_what = row.buy_price ? "add the order to the [book](command:book)" : "exchange";
-								device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(received_satoshis/1e8)+" BTC but it is unconfirmed yet.  We'll "+do_what+" as soon as it gets at least "+MIN_CONFIRMATIONS+" confirmations.");
-								updateState(row.device_address, 'waiting_for_confirmations');
-							}
-						);
-					}
-				);
-			});
-		});
+	async function handleNewTransaction(txid, count_confirmations, to_bitcoin_address, amount) {
+		const received_satoshis = Math.round(amount * 1e8);
+		const rows = await db.query(
+			"SELECT byte_buyer_bindings.device_address, byte_buyer_binding_id, buy_price \n\
+			FROM byte_buyer_bindings LEFT JOIN current_prices USING(device_address) \n\
+			WHERE to_bitcoin_address=?",
+			[to_bitcoin_address]
+		);
+		if (rows.length === 0)
+			return console.log("unexpected payment", txid, to_bitcoin_address, amount);
+		if (rows.length > 1)
+			throw Error("more than 1 row per to btc address");
+		var row = rows[0];
+		if (received_satoshis < MIN_SATOSHIS){ // would burn our profit into BTC fees
+			await db.query(
+				"INSERT "+db.getIgnore()+" INTO byte_buyer_deposits \n\
+				(byte_buyer_binding_id, txid, satoshi_amount, fee_satoshi_amount, net_satoshi_amount, confirmation_date) \n\
+				VALUES (?,?, ?,?,0, "+db.getNow()+")", 
+				[row.byte_buyer_binding_id, txid, received_satoshis, received_satoshis]
+			);
+			return device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(received_satoshis/1e8)+" BTC but it is too small, it is considered a donation and will not be exchanged.");
+		}
+		const res = await db.query(
+			"INSERT " + db.getIgnore() + " INTO byte_buyer_deposits \n\
+			(byte_buyer_binding_id, txid, satoshi_amount, count_confirmations) VALUES(?,?,?,?)",
+			[row.byte_buyer_binding_id, txid, received_satoshis, count_confirmations]
+		);
+		console.log('byte_buyer_deposits res: '+JSON.stringify(res));
+		if (!res.affectedRows)
+			return console.log("duplicate transaction");
+		if (count_confirmations >= MIN_CONFIRMATIONS)
+			return await exchangeBtcToBytes(res.insertId);
+		var do_what = row.buy_price ? "add the order to the [book](command:book)" : "exchange";
+		device.sendMessageToDevice(row.device_address, 'text', "Received your payment of "+(received_satoshis/1e8)+" BTC but it is unconfirmed yet.  We'll "+do_what+" as soon as it gets at least "+MIN_CONFIRMATIONS+" confirmations.");
+		updateState(row.device_address, 'waiting_for_confirmations');
 	}
 	
-	exchangeService.bus.on('bitcoind/addresstxid', function(data) {
-		console.log("bitcoind/addresstxid", data);
-		var to_bitcoin_address = data.address;
-		handleNewTransaction(data.txid, to_bitcoin_address);
-	});
-	
-	exchangeService.node.services.bitcoind.on('tip', function(blockHash) {
-		console.log('new tip '+blockHash);
-		updateConfirmationCountOfRecentTransactionsAndExchange(MIN_CONFIRMATIONS);
-	});
+	rescanRecentTransactions();
+	setInterval(rescanRecentTransactions, 10 * 1000);
 	
 }
-
-
-function ExchangeService(options) {
-	this.node = options.node;
-	EventEmitter.call(this, options);
-	this.bus = this.node.openBus();
-	
-	initChat(this);
-}
-util.inherits(ExchangeService, EventEmitter);
-
-ExchangeService.dependencies = ['bitcoind'];
-
-ExchangeService.prototype.start = function(callback) {
-	setImmediate(callback);
-}
-
-ExchangeService.prototype.stop = function(callback) {
-	setImmediate(callback);
-}
-
-ExchangeService.prototype.getAPIMethods = function() {
-	return [];
-};
-
-ExchangeService.prototype.getPublishEvents = function() {
-	return [];
-};
-
-module.exports = ExchangeService;

@@ -14,17 +14,8 @@ var api = require('./api.js');
 
 
 // amount in BTC
-function sendBtc(amount, address, onDone){
-	client.sendToAddress(address, amount, function(err, txid, resHeaders) {
-		console.log('bitcoin sendToAddress '+address+', amount '+amount+', txid '+txid+', err '+err);
-		if (err && err+'' === 'Error: Transaction amount too small'){
-			err = null;
-			txid = 'too small';
-		}
-		if (err)
-			return onDone(err);
-		onDone(null, txid);
-	});
+async function sendBtc(amount, address) {
+	return await client.sendToAddress(address, amount);
 }
 
 function settleInstantBtc(){
@@ -44,16 +35,17 @@ function settleInstantBtc(){
 							conn.query(
 								"INSERT INTO byte_seller_instant_deal_executions (byte_seller_instant_deal_id) VALUES(?)", 
 								[row.byte_seller_instant_deal_id], 
-								function(){
-									sendBtc(row.satoshi_amount/1e8, row.out_bitcoin_address, function(err, _txid){
+								async function(){
+									const _txid = await sendBtc(row.satoshi_amount / 1e8, row.out_bitcoin_address);
+									/*
 										if (err){
 											notifications.notifyAdminAboutFailedPayment("sending instant "+(row.satoshi_amount/1e8)+" BTC to "+row.out_bitcoin_address+": "+err);
 											return onTransactionDone(err); // would rollback
 										}
-										txid = _txid;
-										console.log('sent instant payment '+row.byte_seller_instant_deal_id+': '+(row.satoshi_amount/1e8)+' BTC in exchange for '+row.byte_amount+' bytes');
-										onTransactionDone(); // executions will be committed now
-									});
+									*/
+									txid = _txid;
+									console.log('sent instant payment '+row.byte_seller_instant_deal_id+': '+(row.satoshi_amount/1e8)+' BTC in exchange for '+row.byte_amount+' bytes');
+									onTransactionDone(); // executions will be committed now
 								}
 							);
 						}, function(err){
@@ -97,16 +89,17 @@ function settleBookBtc(){
 							conn.query(
 								"INSERT INTO byte_seller_order_executions (byte_seller_order_id) VALUES(?)", 
 								[row.byte_seller_order_id], 
-								function(){
-									sendBtc(row.satoshi_amount/1e8, row.out_bitcoin_address, function(err, _txid){
+								async function(){
+									const _txid = await sendBtc(row.satoshi_amount / 1e8, row.out_bitcoin_address);
+									/*
 										if (err){
 											notifications.notifyAdminAboutFailedPayment("sending book "+(row.satoshi_amount/1e8)+" BTC to "+row.out_bitcoin_address+": "+err);
 											return onTransactionDone(err); // would rollback
 										}
-										txid = _txid;
-										console.log('sent book payment '+row.byte_seller_order_id+': '+(row.satoshi_amount/1e8)+' BTC in exchange for '+row.sold_byte_amount+' bytes');
-										onTransactionDone(); // executions will be committed now
-									});
+									*/
+									txid = _txid;
+									console.log('sent book payment '+row.byte_seller_order_id+': '+(row.satoshi_amount/1e8)+' BTC in exchange for '+row.sold_byte_amount+' bytes');
+									onTransactionDone(); // executions will be committed now
 								}
 							);
 						}, function(err){

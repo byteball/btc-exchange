@@ -1,15 +1,12 @@
 /*jslint node: true */
 'use strict';
-var bitcoin = require('bitcoin');
-var constants = require('ocore/constants.js');
+var Client = require('bitcoin-core');
 
-var bTestnet = constants.version.match(/t$/);
-
-var client = new bitcoin.Client({
+var client = new Client({
 	host: 'localhost',
-	port: bTestnet ? 18332 : 8332,
-	user: 'bitcoin',
-	pass: 'local321',
+	port: process.env.testnet ? 18332 : 8332,
+	username: 'bitcoin',
+	password: 'local321',
 	timeout: 60000
 });
 

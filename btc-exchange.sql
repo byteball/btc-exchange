@@ -192,5 +192,10 @@ CREATE TABLE aliases (
 	FOREIGN KEY (device_address) REFERENCES correspondent_devices(device_address)
 );
 
+CREATE TABLE last_blocks (
+	last_block CHAR(64) NOT NULL,
+	last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO last_blocks (last_block) VALUES('00000000000000000005f84b790d7ef6d9f721fe089a984e7e5a161e04ee6394');
 
 

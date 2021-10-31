@@ -21,9 +21,12 @@
 	},
 	"dependencies": {
 		"async": "^2.6.1",
-		"bitcoin": "^3.0.1",
+		"bitcoin-core": "^3.0.0",
 		"bitcore-lib": "^0.13.14",
 		"headless-obyte": "git+https://github.com/byteball/headless-obyte.git",
 		"ocore": "git+https://github.com/byteball/ocore.git"
+	},
+	"resolutions": {
+		"level-rocksdb": "^4.0.0"
 	}
 }
