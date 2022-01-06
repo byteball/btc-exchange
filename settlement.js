@@ -15,7 +15,15 @@ var api = require('./api.js');
 
 // amount in BTC
 async function sendBtc(amount, address) {
-	return await client.sendToAddress(address, amount);
+	try {
+		return await client.sendToAddress(address, amount);
+	}
+	catch (e) {
+		console.log(`sendBtc(${amount}, ${address}) failed`, e);
+		if (e.toString().includes('Transaction amount too small'))
+			return 'too small';
+		throw e;
+	}
 }
 
 function settleInstantBtc(){
